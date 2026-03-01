@@ -2,152 +2,78 @@
 
 ## Overview
 
-Bridge between NestJS dependency injection container and apcore Registry for **zero-decorator** integration. Enables registering existing NestJS service methods as apcore modules without modifying the service source code. Complements [@ApTool Decorator](aptool-decorator-scanner.md) by providing an alternative path for legacy code or third-party services that cannot be decorated.
+Two complementary mechanisms for registering existing NestJS service methods as apcore tools **without decorating the service source code**:
 
-## Relationship to Other Features
+1. **Programmatic API** — `ApcoreRegistryService.registerMethod()` and `registerService()` for imperative registration in `OnModuleInit` or app setup.
+2. **YAML Binding Loader** — `ApBindingLoader` for declarative registration from YAML files.
 
-```
-Two paths to register NestJS services as apcore modules:
-
-Path A (@ApTool Decorator): Add decorators to source code
-  @ApTool() on methods → Scanner auto-registers
-  Best for: new code, code you own
-
-Path B (DI Bridge): Zero source code modification
-  registerService() / YAML binding with DI → external registration
-  Best for: legacy code, third-party services, gradual migration
-```
-
-@ApTool Decorator and DI Bridge are complementary. Both ultimately register modules to the same `ApcoreRegistry` ([MCP Server Integration](mcp-server-integration.md)) and output via the same MCP Server ([MCP Server Integration](mcp-server-integration.md)).
+Both paths produce `FunctionModule` instances and register them in the same `ApcoreRegistryService` used by `@ApTool` decorated methods.
 
 ## Dependencies
 
-- [MCP Server Integration](mcp-server-integration.md) — `ApcoreModule`, `ApcoreRegistry`
-- [Schema Extraction](schema-extraction.md) — `SchemaExtractor` for auto-converting DTO/Zod schemas
-- `apcore-typescript` — `FunctionModule`, `Registry`
-- NestJS `ModuleRef` / `DiscoveryService` — for resolving provider instances
+- [MCP Server Integration](mcp-server-integration.md) — `ApcoreRegistryService`
+- `apcore-js` — `FunctionModule`
+- `js-yaml` — YAML parsing (for `ApBindingLoader`)
 
-## Public API
+## Programmatic API
 
-### ApcoreRegistry Extensions
+### `ApcoreRegistryService.registerMethod(options)`
 
-Extend `ApcoreRegistry` (from [MCP Server Integration](mcp-server-integration.md)) with DI-aware registration methods:
+Registers a single method from a service instance as a `FunctionModule`.
 
-```
-registerService(
-  serviceClass: Type<any>,
-  options: RegisterServiceOptions,
-): void
-
-registerMethod(
-  serviceClass: Type<any>,
-  methodName: string,
-  options: RegisterMethodOptions,
-): void
-```
-
-### RegisterServiceOptions
-
-Bulk-register multiple methods from one service.
+**`RegisterMethodOptions`:**
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `namespace` | `string` | No | class name (normalized) | ID prefix for all methods. |
-| `methods` | `string[] \| '*'` | No | `'*'` | Which methods to register. `'*'` = all public methods. |
-| `exclude` | `string[]` | No | `[]` | Methods to exclude (when using `'*'`). |
-| `descriptions` | `Record<string, string>` | Yes | — | Description per method. Required by apcore spec. |
-| `schemas` | `Record<string, MethodSchema>` | No | `{}` | Explicit schemas per method. Omitted = auto-extract. |
-| `annotations` | `ApToolAnnotations \| null` | No | `null` | Default annotations for all methods. |
-| `methodAnnotations` | `Record<string, ApToolAnnotations>` | No | `{}` | Per-method annotation overrides. |
-| `tags` | `string[]` | No | `[]` | Tags applied to all registered methods. |
-
-```typescript
-interface MethodSchema {
-  inputSchema?: unknown;   // DTO class, Zod, TypeBox, or JSON Schema
-  outputSchema?: unknown;
-}
-```
-
-### RegisterMethodOptions
-
-Register a single method.
-
-| Field | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `id` | `string \| null` | No | `null` | Explicit module ID. `null` = auto-generate. |
-| `namespace` | `string \| null` | No | class name (normalized) | ID prefix. |
+| `instance` | `object` | Yes | — | The already-constructed service instance (from NestJS DI). |
+| `method` | `string` | Yes | — | Method name on the instance. |
 | `description` | `string` | Yes | — | Tool description. |
-| `inputSchema` | `unknown \| null` | No | `null` | Input schema (any supported format). `null` = auto-extract from parameter type. |
-| `outputSchema` | `unknown \| null` | No | `null` | Output schema. `null` = permissive fallback. |
-| `annotations` | `ApToolAnnotations \| null` | No | `null` | Module annotations. |
-| `tags` | `string[]` | No | `[]` | Tags. |
+| `id` | `string` | No | auto-generated | Explicit module ID. If omitted, generated from class name + method. |
+| `inputSchema` | `unknown` | No | `Type.Object({})` | TypeBox, Zod, DTO class, or JSON Schema. |
+| `outputSchema` | `unknown` | No | `Type.Object({})` | Same formats as inputSchema. |
+| `annotations` | `ApToolAnnotations` | No | — | Module annotations. |
+| `tags` | `string[]` | No | — | Tags. |
+| `documentation` | `string \| null` | No | — | Extended docs. |
+| `examples` | `ApToolExample[]` | No | — | Example inputs/outputs. |
 
-## Behavior
+**Returns:** `string` — the module ID under which the method was registered.
 
-### registerService() Flow
+**ID auto-generation:** `instance.constructor.name` + `method` → normalised to snake_case (e.g. `EmailService.sendBatch` → `email.send_batch`).
 
-1. Resolve service instance from NestJS DI container via `ModuleRef.get(serviceClass, { strict: false })`
-2. Determine which methods to register:
-   - If `methods: '*'` → reflect on instance prototype, collect all non-constructor, non-private methods (methods not starting with `_`)
-   - If `methods: ['send', 'batchSend']` → use specified list
-   - Apply `exclude` filter
-3. For each method:
-   a. Generate module ID: `${namespace}.${kebabCase(methodName)}`
-   b. Look up description from `options.descriptions[methodName]`. If missing → throw error.
-   c. Resolve schema: explicit from `options.schemas[methodName]` → auto-extract via [Schema Extraction](schema-extraction.md) → permissive fallback
-   d. Merge annotations: method-specific overrides class-level defaults
-   e. Create execution wrapper (see Execution Bridge below)
-   f. Wrap as `FunctionModule` and register to Registry
-4. Log: `"DI Bridge: registered N methods from ${serviceClass.name}"`
+### `ApcoreRegistryService.registerService(options)`
 
-### registerMethod() Flow
+Bulk-registers multiple methods from one service instance.
 
-Same as above but for a single method. Convenience for one-off registrations.
+**`RegisterServiceOptions`:**
 
-### Execution Bridge
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `instance` | `object` | Yes | — | The service instance. |
+| `methods` | `string[] \| '*'` | Yes | — | Methods to register. `'*'` = all public methods from prototype chain. |
+| `exclude` | `string[]` | No | `[]` | Methods to skip (applies when `methods: '*'`). |
+| `namespace` | `string` | No | normalised class name | ID prefix for all registered methods. |
+| `description` | `string` | No | method name | Default description for all methods. |
+| `annotations` | `ApToolAnnotations` | No | — | Default annotations for all methods. |
+| `tags` | `string[]` | No | — | Tags for all methods. |
+| `methodOptions` | `Record<string, Partial<RegisterMethodOptions>>` | No | `{}` | Per-method overrides (id, description, inputSchema, outputSchema, annotations, tags, etc.). |
 
-Same approach as [@ApTool Scanner](aptool-decorator-scanner.md):
+**Returns:** `string[]` — array of registered module IDs.
 
-```
-execute(inputs, context):
-  instance = DI-resolved service instance (singleton, cached at registration time)
-  result = instance[methodName](inputs)
-  return normalizeResult(result)
-```
-
-The service instance is resolved once during registration and cached (reference held by the closure). This matches NestJS's default singleton scope. For request-scoped providers, see Constraints below.
-
-### DI Instance Resolution
-
-```
-ModuleRef.get(ServiceClass, { strict: false })
-  ↓
-Returns the singleton instance managed by NestJS DI
-  ↓
-Instance has all constructor dependencies already injected
-  ↓
-Closure captures this fully-constructed instance
-```
-
-`strict: false` allows resolving providers from any module in the app, not just the current module. This is necessary because the registration code may live in a different module than the service.
-
-## YAML Binding with DI Support
-
-Extend apcore-typescript's `BindingLoader` concept with DI awareness. Instead of calling `new cls()`, resolve from NestJS container.
+## YAML Binding Loader
 
 ### ApBindingLoader
 
-```
-class ApBindingLoader {
-  constructor(
-    private moduleRef: ModuleRef,
-    private registry: ApcoreRegistry,
-    private schemaExtractor: SchemaExtractor,
-  )
+Injectable service that loads YAML binding files and registers tools with `ApcoreRegistryService`.
 
-  loadBindings(filePath: string): void
-  loadBindingsFromDir(dirPath: string): void
-}
+**Constructor injection:**
+- `ApcoreRegistryService` — required
+- `APCORE_INSTANCE_PROVIDER` (optional) — injection token for a function `(className: string) => object | undefined` that resolves class names to instances
+
+**Methods:**
+
+```typescript
+loadFromString(content: string): string[]              // sync — returns registered IDs
+loadFromFile(filePath: string): Promise<string[]>      // async — reads file then loads
 ```
 
 ### Binding YAML Format
@@ -155,237 +81,154 @@ class ApBindingLoader {
 ```yaml
 bindings:
   - module_id: email.send
-    target: EmailService.send      # class.method (resolved via DI)
+    target: EmailService.send        # resolved via APCORE_INSTANCE_PROVIDER
     description: "Send an email"
-    input_schema:                   # inline JSON Schema
+    input_schema:                    # inline JSON Schema
       type: object
       properties:
         to: { type: string }
         subject: { type: string }
         body: { type: string }
       required: [to, subject, body]
-
-  - module_id: email.batch-send
-    target: EmailService.batchSend
-    description: "Send batch emails"
-    input_schema_ref: ./schemas/batch-send.schema.yaml   # external file
+    output_schema:
+      type: object
+      properties:
+        sent: { type: boolean }
+    tags: [email, mutate]
     annotations:
-      destructive: true
-
-  - module_id: order.create
-    target: OrderService.create
-    description: "Create a new order"
-    # No schema specified → auto-extract from OrderService.create parameter type
+      readonly: false
+      destructive: false
+    documentation: "Sends a transactional email via the configured provider."
 ```
 
+**Fields per binding entry:**
+
+| Field | Required | Description |
+|---|---|---|
+| `module_id` | Yes | Fully-qualified module ID (e.g. `email.send`) |
+| `target` | Yes | `ClassName.methodName` — resolved via `APCORE_INSTANCE_PROVIDER` |
+| `description` | Yes | Tool description |
+| `input_schema` | No | Inline JSON Schema object. Defaults to `Type.Object({})` if omitted. |
+| `output_schema` | No | Inline JSON Schema object. Defaults to `Type.Object({})` if omitted. |
+| `tags` | No | Array of tag strings |
+| `annotations` | No | Object with `readonly`, `destructive`, `idempotent`, etc. |
+| `documentation` | No | Extended documentation string |
+
 **Target resolution:**
-- `EmailService.send` → `ModuleRef.get(EmailService)` → get instance → bind `instance.send`
-- Service class is looked up by name from NestJS's provider registry
-- If class name is ambiguous, support fully qualified: `@myapp/email:EmailService.send`
+- `EmailService.send` → calls `instanceProvider('EmailService')` → gets instance → binds `instance.send`
+- If no `instanceProvider` or class not found → execute function returns `{ error: "No instance available for ClassName.methodName" }`
 
-**Schema resolution (priority order):**
-1. `input_schema` / `output_schema`: inline JSON Schema in YAML
-2. `input_schema_ref` / `output_schema_ref`: external YAML/JSON file
-3. Neither specified: auto-extract from method parameter type via [Schema Extraction](schema-extraction.md)
-4. Auto-extract fails: use permissive schema with warning
+## Behaviour
 
-## Module Registration
+### Return Value Normalisation (both paths)
 
-`ApBindingLoader` and the `registerService()`/`registerMethod()` APIs are provided by `ApcoreModule`. They are available wherever `ApcoreModule` is imported.
+All execute wrappers normalise the return value:
+- `null` / `undefined` → `{}`
+- Non-object (string, number, boolean, array) → `{ result: value }`
+- Object → returned as-is
+
+### Method Discovery (registerService with `'*'`)
+
+Collects all own and prototype methods (excluding `constructor`) up to but not including `Object.prototype`. Includes methods from base classes. Static methods are excluded.
+
+## Usage Examples
+
+### Programmatic — Single Method
 
 ```typescript
 @Module({
-  imports: [
-    ApcoreModule.forRoot({
-      bindings: './bindings',  // optional: auto-load YAML bindings from directory
-    }),
-  ],
-  providers: [EmailService, OrderService],
+  imports: [ApcoreModule.forRoot({}), ApcoreMcpModule.forRoot({ ... })],
+  providers: [PaymentService],
 })
 export class AppModule implements OnModuleInit {
-  constructor(private registry: ApcoreRegistry) {}
+  constructor(
+    private registry: ApcoreRegistryService,
+    private payment: PaymentService,
+  ) {}
 
   onModuleInit() {
-    // Programmatic registration (alternative to YAML)
-    this.registry.registerService(EmailService, {
-      namespace: 'email',
-      methods: ['send', 'batchSend'],
-      descriptions: {
-        send: 'Send an email',
-        batchSend: 'Send batch emails',
-      },
-      methodAnnotations: {
-        batchSend: { destructive: true },
-      },
+    this.registry.registerMethod({
+      instance: this.payment,
+      method: 'charge',
+      id: 'billing.charge_card',
+      description: 'Charge a credit card',
+      inputSchema: Type.Object({
+        amount: Type.Number({ minimum: 1 }),
+        currency: Type.String(),
+        customerId: Type.String(),
+      }),
+      annotations: { destructive: true, requiresApproval: true },
     });
   }
 }
 ```
 
-## Usage Examples
-
-### Bulk Register All Methods
+### Programmatic — Bulk Service Registration
 
 ```typescript
-// Register all public methods of UserService
-this.registry.registerService(UserService, {
-  namespace: 'user',
-  methods: '*',
-  exclude: ['onModuleInit', 'onModuleDestroy'],  // exclude lifecycle hooks
-  descriptions: {
-    create: 'Create a new user',
-    update: 'Update user profile',
-    delete: 'Delete a user account',
-    findById: 'Find user by ID',
-    search: 'Search users',
-  },
-  annotations: { readonly: false },
-  methodAnnotations: {
-    findById: { readonly: true },
-    search: { readonly: true },
-    delete: { destructive: true, requiresApproval: true },
-  },
-});
-// Registers: user.create, user.update, user.delete, user.find-by-id, user.search
-```
-
-### Register Single Method
-
-```typescript
-this.registry.registerMethod(PaymentService, 'charge', {
-  id: 'billing.charge-card',
-  description: 'Charge a credit card',
-  inputSchema: ChargeDto,           // class-validator DTO → auto-extracted
-  annotations: { destructive: true, requiresApproval: true },
-});
-```
-
-### Register Third-Party Service
-
-```typescript
-// A third-party NestJS package — you can't add decorators to its source
-import { StripeService } from '@company/nestjs-stripe';
-
-this.registry.registerService(StripeService, {
-  namespace: 'stripe',
-  methods: ['createCharge', 'refund', 'getBalance'],
-  descriptions: {
-    createCharge: 'Create a Stripe charge',
-    refund: 'Refund a Stripe charge',
-    getBalance: 'Get Stripe account balance',
-  },
-  schemas: {
-    createCharge: {
-      inputSchema: z.object({
-        amount: z.number().min(1),
-        currency: z.string().length(3),
-        customerId: z.string(),
-      }),
+onModuleInit() {
+  this.registry.registerService({
+    instance: this.userService,
+    namespace: 'user',
+    methods: '*',
+    exclude: ['onModuleInit', 'onModuleDestroy'],
+    description: 'User management',
+    annotations: { readonly: false },
+    methodOptions: {
+      findById: { annotations: { readonly: true } },
+      search: { annotations: { readonly: true } },
+      delete: { annotations: { destructive: true, requiresApproval: true } },
     },
-    getBalance: {
-      inputSchema: z.object({}),
-    },
-  },
-  methodAnnotations: {
-    getBalance: { readonly: true },
-    refund: { destructive: true },
-  },
-});
+  });
+  // Registers: user.find_by_id, user.search, user.create, user.update, user.delete
+}
 ```
 
-### YAML Binding File
-
-```yaml
-# bindings/email.binding.yaml
-bindings:
-  - module_id: email.send
-    target: EmailService.send
-    description: "Send an email to a recipient"
-    annotations:
-      open_world: true
-    tags: [communication, email]
-
-  - module_id: email.batch-send
-    target: EmailService.batchSend
-    description: "Send emails to multiple recipients"
-    annotations:
-      destructive: true
-      open_world: true
-    tags: [communication, email, bulk]
-```
-
-### Auto-Load Bindings from Directory
+### YAML Binding Loader
 
 ```typescript
-ApcoreModule.forRoot({
-  bindings: './bindings',  // loads all *.binding.yaml files
-})
+// Provide instance resolver
+{
+  provide: 'APCORE_INSTANCE_PROVIDER',
+  useFactory: (email: EmailService, order: OrderService) =>
+    (className: string) => ({ EmailService: email, OrderService: order })[className],
+  inject: [EmailService, OrderService],
+}
+
+// In a setup service
+@Injectable()
+export class BindingSetup implements OnModuleInit {
+  constructor(private loader: ApBindingLoader) {}
+
+  async onModuleInit() {
+    await this.loader.loadFromFile('./bindings/tools.yaml');
+  }
+}
 ```
 
-## Constraints
+### Combining with @ApTool
 
-- **Singleton scope only.** Services must be NestJS default scope (singleton). Request-scoped and transient-scoped providers cannot be captured at registration time. If a request-scoped provider is detected, throw: `"Cannot register request-scoped provider ${className}. Only singleton providers are supported."`
-- **Service must be registered as NestJS provider.** `ModuleRef.get()` only finds providers that are part of the NestJS module tree. Unregistered classes throw: `"Cannot resolve ${className} from NestJS DI container. Ensure it is registered as a provider."`
-- **Descriptions are mandatory.** apcore spec requires description for every module. `registerService()` throws if a method is missing from the `descriptions` map.
-- **Method resolution:** Only own methods and prototype methods are considered. Inherited methods from base classes are included. Static methods are excluded.
+Both paths register to the same `ApcoreRegistryService`. A service can have some methods decorated with `@ApTool` and others registered programmatically — they coexist without conflict.
+
+```typescript
+// TodoService uses @ApTool on list/add/complete
+// Legacy ReportService registered via registerService()
+// Both appear in MCP tools/list
+```
 
 ## Error Handling
 
-| Error | When | Message |
+| Error | When | Behaviour |
 |---|---|---|
-| Service not found in DI | `registerService()` or `registerMethod()` | `"Cannot resolve ${className} from NestJS DI container. Ensure it is registered as a provider."` |
-| Request-scoped provider | Registration attempt | `"Cannot register request-scoped provider ${className}. Only singleton providers are supported."` |
-| Missing description | `registerService()` with missing description entry | `"Missing description for ${className}.${methodName}. All methods require a description."` |
-| Method not found | `registerMethod()` with non-existent method | `"Method '${methodName}' not found on ${className}."` |
-| Duplicate module ID | Same ID registered twice | `"Duplicate apcore module ID '${id}'. Already registered."` |
-| YAML parse error | `loadBindings()` with invalid YAML | `"Failed to parse binding file ${filePath}: ${parseError}"` |
-| Target class not found | YAML binding with unknown class name | `"Cannot resolve target '${target}': class '${className}' not found in NestJS DI container."` |
-| Schema extraction failure | Auto-extract fails for a method | Warning logged, permissive schema used as fallback. |
+| Method not found on instance | `registerMethod()` | `Error: Method "${method}" does not exist on ${className}` |
+| YAML parse error | `loadFromString()` | `js-yaml` throws — propagates to caller |
+| Instance not resolved (YAML) | `loadFromString()` | Execute returns `{ error: "No instance available for ..." }` |
 
-## Testing Strategy
+## Out of Scope
 
-### Unit Tests — registerService()
-- Register all public methods of a test service → correct IDs and schemas
-- `methods: '*'` discovers only public methods (not `_private`, not constructor)
-- `methods: [...]` registers only specified methods
-- `exclude` filters methods correctly
-- Namespace from option vs auto-generated from class name
-- Missing description → throws
-- Annotation merging: method-level overrides service-level
-- Tag assignment
-
-### Unit Tests — registerMethod()
-- Single method registration with explicit ID
-- Single method registration with auto-generated ID
-- Schema auto-extraction via Schema Extraction
-- Explicit schema override (DTO, Zod, TypeBox)
-
-### Unit Tests — ApBindingLoader
-- Load YAML binding → correct modules registered
-- Inline schema in YAML → converted correctly
-- Schema ref to external file → loaded and converted
-- No schema → auto-extract attempted
-- Invalid YAML → clear error
-- Unknown target class → clear error
-- Multiple binding files from directory
-
-### Integration Tests
-- Full NestJS app with `registerService()` → modules appear in MCP tools/list
-- MCP tools/call executes registered method with DI dependencies working
-- YAML bindings loaded at startup → tools available
-- Combining @ApTool Decorator and DI Bridge (registerService) in same app → both work, no conflicts
-- Third-party provider registration → DI resolves correctly
-
-### Edge Cases
-- Service with no public methods + `methods: '*'` → no modules registered, warning logged
-- Method returning void → normalized to `{}`
-- Method throwing error → handled by apcore error pipeline
-- Service registered in a lazy-loaded module → resolved correctly with `strict: false`
-
-## Out of Scope (MVP)
-
-- Request-scoped and transient-scoped provider support
-- Auto-discovery of all providers without explicit registration (would register too many irrelevant methods)
-- Binding hot-reload (watch YAML files for changes)
-- Method parameter name preservation (TypeScript erases parameter names)
-- Binding to static methods or standalone functions (use apcore-typescript's native `module()` for these)
+- Auto-discovery of all providers without explicit registration
+- Request-scoped and transient-scoped provider support (singleton instances only)
+- `input_schema_ref` / `output_schema_ref` external file references in YAML
+- Auto-loading a bindings directory from `ApcoreModule.forRoot()` (the `bindings` field in `ApcoreModuleOptions` is available but loading must be triggered manually via `ApBindingLoader`)
+- Binding hot-reload (file watching)
+- Binding to static methods or standalone functions

@@ -5,9 +5,17 @@ import {
   ApcoreMcpModule,
   ApcoreRegistryService,
   ApToolScannerService,
+  JWTAuthenticator,
 } from 'nestjs-apcore';
 import { TodoModule } from './todo/todo.module.js';
 import { WeatherModule } from './weather/weather.module.js';
+
+// Optional JWT auth — enabled when JWT_SECRET env var is set.
+// Without JWT_SECRET the demo runs with no auth (same as before).
+const jwtSecret = process.env.JWT_SECRET;
+const authenticator = jwtSecret
+  ? new JWTAuthenticator({ secret: jwtSecret })
+  : undefined;
 
 /**
  * Root application module.
@@ -31,6 +39,7 @@ import { WeatherModule } from './weather/weather.module.js';
       allowExecute: true,
       name: 'nestjs-apcore-demo',
       version: '1.0.0',
+      authenticator,
     }),
 
     TodoModule,

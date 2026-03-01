@@ -2,164 +2,63 @@
 
 ## Overview
 
-Adapter system that extracts JSON Schema from NestJS-native type definitions: class-validator DTOs, Zod schemas, and TypeBox schemas. Provides a unified `SchemaExtractor` that [@ApTool Scanner](aptool-decorator-scanner.md) and direct `register()` calls can use to convert framework-native types into apcore-compatible JSON Schema.
+`SchemaExtractor` is an orchestrator that detects the format of a schema input and delegates extraction to the appropriate adapter. The result is always a TypeBox-compatible `TSchema` (or plain JSON Schema via `extractJsonSchema()`). Used by `ApToolScannerService` and `ApcoreRegistryService.registerMethod()` to accept any schema format without the user needing to know which adapter to call.
 
 ## Dependencies
 
-- `apcore-typescript` — `TSchema` (TypeBox), JSON Schema types
-- `@sinclair/typebox` — TypeBox schema construction
-- Optional peer dependencies (user installs what they use):
-  - `class-validator` + `class-transformer` — for DTO extraction
-  - `zod` — for Zod extraction
-  - `reflect-metadata` — for design:type metadata
-
-## Problem
-
-apcore-typescript requires `TSchema` (TypeBox) for `inputSchema` and `outputSchema`. NestJS developers don't use TypeBox — they use:
-
-| NestJS Convention | Prevalence | Example |
-|---|---|---|
-| class-validator DTOs | Very High | `class CreateUserDto { @IsString() name: string }` |
-| Zod schemas | Growing | `z.object({ name: z.string() })` |
-| TypeBox schemas | Low (apcore-native) | `Type.Object({ name: Type.String() })` |
-| Plain JSON Schema | Low | `{ type: 'object', properties: { name: { type: 'string' } } }` |
-
-Without Schema Extraction, developers must manually rewrite their existing types as TypeBox schemas — doubling the type maintenance burden.
+- `@sinclair/typebox` — `TSchema` type and schema construction
+- `apcore-js` — target schema format
+- Optional peer dependencies (installed by user as needed):
+  - `class-validator` + `class-transformer` — for `DtoAdapter`
+  - `zod` — for `ZodAdapter`
 
 ## Architecture
 
 ```
-Input Sources          SchemaExtractor          Output
-─────────────         ───────────────         ────────
-class-validator DTO ─→ DtoAdapter ──────┐
-Zod schema ──────────→ ZodAdapter ──────┤──→ JSON Schema ──→ TypeBox TSchema
-TypeBox TSchema ─────→ PassthroughAdapter ┤
-Plain JSON Schema ───→ JsonSchemaAdapter ─┘
+Input                  SchemaExtractor (priority chain)       Output
+─────                  ────────────────────────────────       ──────
+TypeBox TSchema    →   TypeBoxAdapter    (priority 100)  →
+Zod schema         →   ZodAdapter        (priority 50)   →   TSchema / JSON Schema
+Plain JSON Schema  →   JsonSchemaAdapter (priority 30)   →
+class-validator DTO→   DtoAdapter        (priority 20)   →
 ```
 
-### SchemaExtractor (Core)
+Adapters are tried in descending priority order. The first one whose `detect()` returns `true` handles the extraction. Custom adapters can be added via `registerAdapter()` and are inserted by priority.
 
-Unified entry point. Detects input type and delegates to the correct adapter.
+## Public API
 
+```typescript
+class SchemaExtractor {
+  extract(input: unknown): TSchema
+  extractJsonSchema(input: unknown): Record<string, unknown>
+  detect(input: unknown): string | null   // returns adapter name, or null if no match
+  registerAdapter(adapter: SchemaAdapter): void
+}
+
+interface SchemaAdapter {
+  readonly name: string
+  readonly priority: number
+  detect(input: unknown): boolean
+  extract(input: unknown): TSchema
+  extractJsonSchema(input: unknown): Record<string, unknown>
+}
+
+class SchemaExtractionError extends Error {}
 ```
-extract(source: unknown): TSchema
-extractJsonSchema(source: unknown): JsonSchema
-detect(source: unknown): 'dto' | 'zod' | 'typebox' | 'json-schema' | 'unknown'
-```
-
-**Detection logic (priority order):**
-
-1. **TypeBox**: Has `Symbol.for('TypeBox.Kind')` property → PassthroughAdapter
-2. **Zod**: Has `_def` property and `safeParse` method → ZodAdapter
-3. **JSON Schema**: Plain object with `type` property at top level → JsonSchemaAdapter
-4. **DTO class**: Is a class (constructor function) with class-validator metadata → DtoAdapter
-5. **Unknown**: Throw `SchemaExtractionError` with clear message
 
 ## Adapters
 
-### DtoAdapter (class-validator)
+### TypeBoxAdapter (priority 100)
 
-Converts class-validator decorated DTO classes to JSON Schema.
+**Detection:** Input has `Symbol.for('TypeBox.Kind')` property.
 
-**Input:**
-```typescript
-class SendEmailDto {
-  @IsString()
-  @IsNotEmpty()
-  to: string;
+**Behaviour:** Passthrough — TypeBox schemas are already `TSchema`-compatible. The schema is returned as-is.
 
-  @IsString()
-  @MaxLength(200)
-  subject: string;
+### ZodAdapter (priority 50)
 
-  @IsString()
-  body: string;
+**Detection:** Input has `_def` property and `safeParse` method.
 
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  cc?: string[];
-}
-```
-
-**Output (JSON Schema):**
-```json
-{
-  "type": "object",
-  "properties": {
-    "to": { "type": "string", "minLength": 1 },
-    "subject": { "type": "string", "maxLength": 200 },
-    "body": { "type": "string" },
-    "cc": {
-      "type": "array",
-      "items": { "type": "string" }
-    }
-  },
-  "required": ["to", "subject", "body"]
-}
-```
-
-**Implementation approach:**
-- Use `class-validator`'s `getMetadataStorage()` to read validation metadata
-- Use `reflect-metadata`'s `design:type` to read TypeScript type info
-- Map class-validator decorators to JSON Schema constraints:
-
-| class-validator | JSON Schema |
-|---|---|
-| `@IsString()` | `{ "type": "string" }` |
-| `@IsNumber()` | `{ "type": "number" }` |
-| `@IsBoolean()` | `{ "type": "boolean" }` |
-| `@IsInt()` | `{ "type": "integer" }` |
-| `@IsArray()` | `{ "type": "array" }` |
-| `@IsEnum(E)` | `{ "enum": [...values] }` |
-| `@IsOptional()` | Remove from `required` |
-| `@MinLength(n)` | `{ "minLength": n }` |
-| `@MaxLength(n)` | `{ "maxLength": n }` |
-| `@Min(n)` | `{ "minimum": n }` |
-| `@Max(n)` | `{ "maximum": n }` |
-| `@IsNotEmpty()` | `{ "minLength": 1 }` |
-| `@IsEmail()` | `{ "format": "email" }` |
-| `@IsUrl()` | `{ "format": "uri" }` |
-| `@IsDateString()` | `{ "format": "date-time" }` |
-| `@Matches(regex)` | `{ "pattern": "..." }` |
-| `@ArrayMinSize(n)` | `{ "minItems": n }` |
-| `@ArrayMaxSize(n)` | `{ "maxItems": n }` |
-| `@ValidateNested()` | Recursively extract nested DTO |
-| `@Type(() => ChildDto)` | Resolve nested class for recursion |
-
-**Nested DTO handling:**
-```typescript
-class AddressDto {
-  @IsString() street: string;
-  @IsString() city: string;
-}
-
-class CreateUserDto {
-  @IsString() name: string;
-
-  @ValidateNested()
-  @Type(() => AddressDto)
-  address: AddressDto;
-}
-```
-→ `address` property recursively extracts `AddressDto` schema.
-
-**Circular reference detection:**
-Track visited classes during recursion. If a class references itself (directly or indirectly), generate a `$ref` or throw with clear message.
-
-**Limitations:**
-- Custom validators (`@Validate(CustomValidator)`) are not extractable → ignored with warning
-- Conditional validation (`@ValidateIf()`) is not representable in JSON Schema → ignored
-- Groups-based validation is not supported → all validators treated as active
-- `design:type` reflection only provides the constructor, not generic type args. `Array<string>` is seen as `Array`. Array item types require `@IsString({ each: true })` or `@Type(() => ChildDto)`.
-
-### ZodAdapter
-
-Converts Zod schemas to JSON Schema.
-
-**Implementation approach:**
-- Use `zod-to-json-schema` (community package) or Zod v4's built-in `.toJsonSchema()` method (if available)
-- If neither available, implement manual traversal of Zod's `_def` structure
+**Behaviour:** Manual recursive traversal of Zod's `_def` structure. No extra packages required.
 
 **Supported Zod types:**
 
@@ -168,169 +67,143 @@ Converts Zod schemas to JSON Schema.
 | `z.string()` | `{ "type": "string" }` |
 | `z.number()` | `{ "type": "number" }` |
 | `z.boolean()` | `{ "type": "boolean" }` |
-| `z.object({})` | `{ "type": "object", "properties": {...} }` |
+| `z.object({})` | `{ "type": "object", "properties": {...}, "required": [...] }` |
 | `z.array(z.string())` | `{ "type": "array", "items": { "type": "string" } }` |
 | `z.enum([...])` | `{ "enum": [...] }` |
-| `z.optional()` | Remove from `required` |
-| `z.nullable()` | `{ "type": ["original", "null"] }` |
-| `z.default(v)` | `{ "default": v }` |
-| `z.min(n)` / `z.max(n)` | Constraints mapped to min/max/minLength/maxLength |
-| `z.union([...])` | `{ "anyOf": [...] }` |
+| `z.nativeEnum(E)` | `{ "enum": [...values] }` |
+| `z.optional(t)` | removes field from `required` |
+| `z.nullable(t)` | `{ "anyOf": [t, { "type": "null" }] }` |
+| `z.default(t, v)` | `{ "default": v, ...t }` |
 | `z.literal(v)` | `{ "const": v }` |
+| `z.union([...])` | `{ "anyOf": [...] }` |
 | `z.record(k, v)` | `{ "type": "object", "additionalProperties": {...} }` |
+| `z.effects(t)` | delegates to inner type |
 
-### PassthroughAdapter (TypeBox)
+### JsonSchemaAdapter (priority 30)
 
-TypeBox schemas are already JSON Schema compatible. This adapter:
-1. Validates the input is a valid TSchema (has `Symbol.for('TypeBox.Kind')`)
-2. Returns it as-is (or deep clones to prevent mutation)
+**Detection:** Input is a plain object with a `type` property (string or array).
 
-### JsonSchemaAdapter
+**Behaviour:** Passthrough — plain JSON Schema objects are returned as-is (cast to `TSchema`).
 
-Plain JSON Schema objects. This adapter:
-1. Validates the object has `type: 'object'` at top level (or wraps it)
-2. Converts to TypeBox TSchema via apcore-typescript's `jsonSchemaToTypeBox()`
+### DtoAdapter (priority 20)
+
+**Detection:** Input is a function (class constructor) with `class-validator` metadata registered against it.
+
+**Behaviour:** Reads `class-validator`'s `getMetadataStorage()` and maps decorator metadata to JSON Schema.
+
+**Supported class-validator decorators:**
+
+| Decorator | JSON Schema |
+|---|---|
+| `@IsString()` | `{ "type": "string" }` |
+| `@IsNumber()` | `{ "type": "number" }` |
+| `@IsBoolean()` | `{ "type": "boolean" }` |
+| `@IsInt()` | `{ "type": "integer" }` |
+| `@IsArray()` | `{ "type": "array" }` |
+| `@IsEnum(E)` | `{ "enum": [...values] }` |
+| `@IsOptional()` | Remove from `required` |
+| `@IsNotEmpty()` | `{ "minLength": 1 }` |
+| `@IsEmail()` | `{ "format": "email" }` |
+| `@IsUrl()` | `{ "format": "uri" }` |
+| `@IsDateString()` | `{ "format": "date-time" }` |
+| `@MinLength(n)` | `{ "minLength": n }` |
+| `@MaxLength(n)` | `{ "maxLength": n }` |
+| `@Min(n)` | `{ "minimum": n }` |
+| `@Max(n)` | `{ "maximum": n }` |
+| `@Matches(regex)` | `{ "pattern": "..." }` |
+| `@ArrayMinSize(n)` | `{ "minItems": n }` |
+| `@ArrayMaxSize(n)` | `{ "maxItems": n }` |
 
 ## Integration with @ApTool Scanner
 
-[@ApTool Scanner](aptool-decorator-scanner.md)'s `ApToolScanner` uses `SchemaExtractor` at two points:
-
-### 1. Explicit schema in @ApTool options
+`ApToolScannerService` calls `SchemaExtractor.extract()` for any schema provided in `@ApTool` options. If extraction throws, it falls back to `Type.Object({})` silently.
 
 ```typescript
+// Any of these work equally in @ApTool
 @ApTool({
   description: 'Send email',
-  inputSchema: SendEmailDto,      // ← class-validator DTO
-  outputSchema: z.object({ ... }), // ← Zod
+  inputSchema: SendEmailDto,                   // DtoAdapter
+  // inputSchema: z.object({ to: z.string() }), // ZodAdapter
+  // inputSchema: Type.Object({ to: Type.String() }), // TypeBoxAdapter
+  // inputSchema: { type: 'object', properties: { to: { type: 'string' } } }, // JsonSchemaAdapter
 })
 ```
 
-Scanner calls `SchemaExtractor.extract(options.inputSchema)` → gets TSchema.
+## Standalone Usage
 
-### 2. Inferred schema from method parameter type
-
-```typescript
-@ApTool({ description: 'Send email' })
-async send(input: SendEmailDto): Promise<SendResult> { ... }
-```
-
-Scanner reads `Reflect.getMetadata('design:paramtypes', target, methodName)` → gets `[SendEmailDto]` → calls `SchemaExtractor.extract(SendEmailDto)`.
-
-**Return type inference limitation:** `Reflect.getMetadata('design:returntype', ...)` returns `Promise` for async methods, losing the generic parameter `SendResult`. Options:
-- Require explicit `outputSchema` for async methods
-- Use a permissive output schema (`Type.Record(Type.String(), Type.Unknown())`) as fallback
-- Allow `@ApTool({ outputSchema: SendResult })` override
-
-Recommended: use permissive fallback + allow override. Output validation is less critical than input validation for MCP tools.
-
-## Public API
-
-### SchemaExtractor
-
-```
-class SchemaExtractor {
-  extract(source: unknown): TSchema
-  extractJsonSchema(source: unknown): JsonSchema
-  detect(source: unknown): SchemaSourceType
-  registerAdapter(type: string, adapter: SchemaAdapter): void
-}
-
-type SchemaSourceType = 'dto' | 'zod' | 'typebox' | 'json-schema' | 'unknown'
-
-interface SchemaAdapter {
-  detect(source: unknown): boolean
-  toJsonSchema(source: unknown): JsonSchema
-}
-```
-
-### Standalone Usage
-
-`SchemaExtractor` is injectable and usable outside the @ApTool Scanner, for manual registration scenarios:
+`SchemaExtractor` can be used directly — it is not a NestJS provider, just a plain class:
 
 ```typescript
-@Injectable()
-class MyBridge implements OnModuleInit {
-  constructor(
-    private registry: ApcoreRegistry,
-    private schema: SchemaExtractor,
-  ) {}
+const extractor = new SchemaExtractor();
 
-  onModuleInit() {
-    this.registry.register('email.send', new FunctionModule({
-      moduleId: 'email.send',
-      description: 'Send email',
-      inputSchema: this.schema.extract(SendEmailDto),   // ← auto-converts
-      outputSchema: this.schema.extract(SendResultDto),
-      execute: async (inputs) => { /* ... */ },
-    }));
-  }
-}
+// detect() returns the adapter name or null
+console.log(extractor.detect(Type.String()));   // 'TypeBoxAdapter'
+console.log(extractor.detect(z.string()));      // 'ZodAdapter'
+console.log(extractor.detect(MyDto));           // 'DtoAdapter'
+console.log(extractor.detect({ type: 'string' })); // 'JsonSchemaAdapter'
+console.log(extractor.detect(42));              // null
+
+// extract() returns TSchema
+const schema = extractor.extract(SendEmailDto);
+
+// extractJsonSchema() returns plain JSON Schema object
+const json = extractor.extractJsonSchema(z.object({ name: z.string() }));
 ```
 
-## Configuration
-
-Schema extraction is configured via `ApcoreModule`:
+## Custom Adapters
 
 ```typescript
-ApcoreModule.forRoot({
-  schema: {
-    adapters: ['dto', 'zod', 'typebox', 'json-schema'],  // default: all
-    // Or limit to only the ones your app uses:
-    // adapters: ['dto'],
-    strictOutput: false,  // default: false. If true, require explicit outputSchema
-  },
-})
-```
+const extractor = new SchemaExtractor();
 
-Adapters are only loaded if their peer dependency is available. If `class-validator` is not installed, the DtoAdapter is silently skipped (not an error unless a DTO class is encountered).
+extractor.registerAdapter({
+  name: 'MyCustomAdapter',
+  priority: 75,  // between TypeBox (100) and Zod (50)
+  detect: (input) => input instanceof MyCustomSchema,
+  extract: (input) => convertToTypebox(input as MyCustomSchema),
+  extractJsonSchema: (input) => convertToJsonSchema(input as MyCustomSchema),
+});
+```
 
 ## Error Handling
 
 | Error | When | Message |
 |---|---|---|
-| Unknown schema type | `extract()` called with unrecognized input | `"Cannot extract schema from ${typeof source}. Expected: class-validator DTO, Zod schema, TypeBox schema, or JSON Schema object."` |
-| Missing peer dependency | DTO class detected but `class-validator` not installed | `"class-validator is required to extract schemas from DTO classes. Install it: npm install class-validator class-transformer"` |
-| Circular reference in DTO | DTO class references itself | `"Circular reference detected in DTO: ${className} → ... → ${className}. Use explicit inputSchema instead."` |
-| Invalid JSON Schema | Plain object doesn't conform to JSON Schema spec | `"Invalid JSON Schema: missing 'type' property."` |
+| `SchemaExtractionError` | No adapter matches | `"No adapter matched the provided input. Ensure the input is a valid TypeBox, Zod, JSON Schema, or class-validator DTO schema."` |
+| Silent fallback in scanner | Extraction fails inside `ApToolScannerService` | Uses `Type.Object({})` — no throw |
 
 ## Testing Strategy
 
-### Unit Tests — DtoAdapter
-- Simple DTO with string/number/boolean fields
-- DTO with `@IsOptional()` fields → not in `required`
-- DTO with constraints (`@MinLength`, `@Max`, etc.) → JSON Schema constraints
-- Nested DTO with `@ValidateNested()` + `@Type()`
-- DTO with arrays and `{ each: true }` validators
-- DTO with `@IsEnum()` → enum values
-- Circular reference detection
-- Missing `class-validator` → clear error
+### Unit Tests — TypeBoxAdapter
+- TypeBox schema passes through as-is
+- Symbol.for('TypeBox.Kind') is preserved
 
 ### Unit Tests — ZodAdapter
-- `z.object()` with various field types
-- Nested `z.object()` within `z.object()`
-- `z.optional()` and `z.nullable()`
-- `z.array()`, `z.enum()`, `z.union()`, `z.literal()`
-- Constraints (`min`, `max`, `length`)
-- Missing `zod` → clear error
+- `z.object()` with string/number/boolean/array fields
+- Nested `z.object()`
+- `z.optional()`, `z.nullable()`, `z.default()`
+- `z.array()`, `z.enum()`, `z.nativeEnum()`, `z.union()`, `z.literal()`, `z.record()`
+- `z.effects()` delegates to inner type
+
+### Unit Tests — JsonSchemaAdapter
+- Plain JSON Schema passthrough
+
+### Unit Tests — DtoAdapter
+- Simple DTO with typed fields
+- `@IsOptional()` fields not in `required`
+- Constraints map correctly
+- `@IsEnum()` produces enum values
 
 ### Unit Tests — SchemaExtractor
-- Auto-detection: DTO class → DtoAdapter
-- Auto-detection: Zod schema → ZodAdapter
-- Auto-detection: TypeBox schema → PassthroughAdapter
-- Auto-detection: plain JSON Schema → JsonSchemaAdapter
-- Unknown type → clear error
-- Custom adapter registration via `registerAdapter()`
+- `detect()` returns correct adapter name for each type
+- `detect()` returns `null` for unknown input
+- `extract()` delegates to correct adapter
+- `registerAdapter()` inserts by priority
 
-### Integration Tests
-- `@ApTool` with class-validator DTO → schema extracted and registered
-- `@ApTool` with Zod schema → schema extracted and registered
-- `@ApTool` with TypeBox schema → passes through directly
-- MCP `tools/list` returns correct JSON Schema for all adapter types
+## Out of Scope
 
-## Out of Scope (MVP)
-
-- TypeScript type inference without decorators (impossible at runtime due to type erasure)
-- class-validator groups-based conditional schemas
-- Custom validator extraction
+- TypeScript type inference without decorators (impossible at runtime)
+- Circular reference detection in DTOs
+- Nested DTO via `@ValidateNested()` + `@Type()`
+- `class-validator` groups-based conditional schemas
+- Schema caching/memoization
 - Swagger/OpenAPI schema import
-- Schema caching/memoization (add if performance is an issue)

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Type } from '@sinclair/typebox';
-import { ApModule, ApTool } from 'nestjs-apcore';
+import { ApModule, ApTool, getCurrentIdentity } from 'nestjs-apcore';
 
 interface Todo {
   id: number;
@@ -37,6 +37,7 @@ export class TodoService {
         createdAt: Type.String(),
       })),
       count: Type.Number({ description: 'Number of todos returned' }),
+      caller: Type.String({ description: 'Identity of the caller (from JWT), or "anonymous"' }),
     }),
     annotations: { readonly: true, idempotent: true },
     tags: ['todo', 'query'],
@@ -46,7 +47,8 @@ export class TodoService {
     if (inputs.done !== undefined) {
       result = result.filter((t) => t.done === inputs.done);
     }
-    return { todos: result, count: result.length };
+    const caller = getCurrentIdentity()?.id ?? 'anonymous';
+    return { todos: result, count: result.length, caller };
   }
 
   @ApTool({

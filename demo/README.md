@@ -11,7 +11,7 @@ A NestJS application showcasing how **nestjs-apcore** turns standard NestJS serv
 npm install
 npm run build
 
-cd examples
+cd demo
 npm install
 npx tsx src/main.ts
 ```
@@ -22,7 +22,7 @@ npx tsx src/main.ts
 ### Docker
 
 ```bash
-cd examples
+cd demo
 docker compose up --build
 ```
 
@@ -93,7 +93,7 @@ curl -X DELETE http://localhost:3000/todos/1
 ## Project Structure
 
 ```
-examples/
+demo/
 ├── src/
 │   ├── main.ts                 # NestJS bootstrap (REST :3000 + MCP :8000)
 │   ├── app.module.ts           # Root module wiring
@@ -110,6 +110,59 @@ examples/
 ├── package.json
 └── tsconfig.json
 ```
+
+## JWT Authentication
+
+JWT auth is optional — controlled by the `JWT_SECRET` environment variable. When set, all `/mcp` requests require a valid Bearer token. The Explorer UI (`/explorer/`) and `/health` endpoint are always exempt.
+
+### Enable JWT
+
+```bash
+JWT_SECRET=my-secret npx tsx src/main.ts
+```
+
+### Test Token
+
+Pre-generated token (secret: `my-secret`, algorithm: HS256):
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZW1vLXVzZXIiLCJ0eXBlIjoidXNlciIsInJvbGVzIjpbImFkbWluIl19.yOFQMlZnMZwXg6KoJX61sCm2VbCzmqtT8dFRNsOhaZM
+```
+
+Payload:
+
+```json
+{"sub": "demo-user", "type": "user", "roles": ["admin"]}
+```
+
+### Verify with cURL
+
+```bash
+TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZW1vLXVzZXIiLCJ0eXBlIjoidXNlciIsInJvbGVzIjpbImFkbWluIl19.yOFQMlZnMZwXg6KoJX61sCm2VbCzmqtT8dFRNsOhaZM"
+
+# Health endpoint is always exempt
+curl http://localhost:8000/health
+
+# Without token -> 401
+curl http://localhost:8000/mcp
+
+# With token -> 200
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/mcp
+```
+
+### Identity in Tool Methods
+
+`TodoService.list()` calls `getCurrentIdentity()` and includes the caller in its response:
+
+```json
+{ "todos": [...], "count": 2, "caller": "demo-user" }
+```
+
+Without a token (or when JWT is disabled), `caller` is `"anonymous"`.
+
+### Explorer UI with JWT
+
+The Explorer at http://localhost:8000/explorer/ always loads without a token. To execute tools with identity, paste the Bearer token into the **Authorization** input at the top of the page — it will be included in all tool execution requests.
 
 ## Key Takeaway
 

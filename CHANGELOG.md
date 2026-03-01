@@ -5,34 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2026-02-27
+## [0.1.0] - 2026-03-01
+
+Initial release.
 
 ### Added
 
-- **`metricsCollector` option in `ApcoreMcpModuleOptions`** — Accepts a `{ exportPrometheus(): string }` instance to enable the Prometheus `/metrics` endpoint on HTTP transports, matching the upstream `ServeOptions.metricsCollector` from apcore-mcp.
-- **Re-exports from `apcore-mcp`** — `reportProgress`, `elicit`, `createBridgeContext` helpers and `BridgeContext`, `OpenAIToolDef`, `ServeOptions`, `MetricsExporter` types are now re-exported from `nestjs-apcore` for convenience, so users don't need to import from `apcore-mcp` directly.
-- **`metricsCollector` forwarding in `ApcoreMcpService.start()`** — The service now passes the `metricsCollector` option through to `serve()`.
-- **New test**: `metricsCollector` forwarding verified in `apcore-mcp-service.test.ts`.
-
-### Changed
-
-- **`logLevel` type tightened** — `ApcoreMcpModuleOptions.logLevel` changed from `string` to `'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL'`, matching the upstream `ServeOptions` definition.
-- **Examples README updated** — Local quick start now includes prerequisite `npm install && npm run build` for the parent library. Docker section now lists MCP Explorer and REST API URLs.
-
-### Removed
-
-- **`endpoint` field from `ApcoreMcpModuleOptions`** — Dead code that was never forwarded to `serve()`. No upstream equivalent.
-
-## [0.1.0] - 2026-02-26
-
-### Added
-
-- **Core module system** — `ApcoreModule.forRoot()` / `forRootAsync()` providing `ApcoreRegistryService` and `ApcoreExecutorService` as global NestJS services wrapping the upstream `apcore-js` Registry and Executor.
-- **MCP integration** — `ApcoreMcpModule.forRoot()` / `forRootAsync()` providing `ApcoreMcpService` that wraps `serve()` and `toOpenaiTools()` from `apcore-mcp`. Supports all transport types (`stdio`, `streamable-http`, `sse`), Tool Explorer UI, and lifecycle management via `OnApplicationBootstrap` / `OnModuleDestroy`.
-- **Decorator-based registration** — `@ApTool`, `@ApModule`, `@ApContext` decorators for marking NestJS service methods as apcore tools. `ApToolScannerService` auto-discovers decorated methods at module initialization and registers them as `FunctionModule` instances.
-- **Programmatic registration** — `ApcoreRegistryService.registerMethod()` and `registerService()` for registering service methods without decorators.
-- **YAML binding loader** — `ApBindingLoader` for registering tools from `binding.yaml` files, supporting `module_id`, `target`, schemas, annotations, and tags.
-- **Schema adapters** — Pluggable schema extraction with 4 built-in adapters: TypeBox, Zod, class-validator DTO, and raw JSON Schema. `SchemaExtractor` auto-detects schema format via priority-based adapter chain.
-- **ID generation utilities** — `normalizeClassName`, `normalizeMethodName`, `generateModuleId` for consistent module ID generation (e.g., `EmailService.sendBatch` -> `email.send_batch`).
-- **Examples demo** — Complete NestJS application in `examples/` with `TodoModule` (CRUD + REST controller, dual-protocol) and `WeatherModule` (DI chain with `GeoService`). Includes Dockerfile, docker-compose.yml, and README.
-- **Full test suite** — 358 tests across 17 test files covering all modules, services, decorators, adapters, and integration scenarios.
+- **Core module** — `ApcoreModule.forRoot()` / `forRootAsync()` providing `ApcoreRegistryService` and `ApcoreExecutorService` as global NestJS singletons wrapping the upstream `apcore-js` `Registry` and `Executor`.
+- **MCP module** — `ApcoreMcpModule.forRoot()` / `forRootAsync()` providing `ApcoreMcpService` that wraps `serve()` and `toOpenaiTools()` from `apcore-mcp`. Supports `stdio`, `streamable-http`, and `sse` transports, Tool Explorer UI, JWT authentication, Prometheus metrics, and lifecycle management via `OnApplicationBootstrap` / `OnModuleDestroy`.
+- **Decorators** — `@ApTool`, `@ApModule`, `@ApContext` for marking NestJS service methods as apcore tools. `ApToolScannerService` auto-discovers decorated methods at startup and registers them as `FunctionModule` instances.
+- **Programmatic registration** — `ApcoreRegistryService.registerMethod()` and `registerService()` for registering methods without decorators.
+- **YAML binding loader** — `ApBindingLoader` for registering tools from YAML files, supporting `module_id`, `target`, schemas, annotations, and tags.
+- **Schema adapters** — Pluggable schema extraction with 4 built-in adapters (TypeBox at priority 100, Zod at 50, raw JSON Schema at 30, class-validator DTO at 20). `SchemaExtractor` auto-detects format via priority chain. Custom adapters supported via `SchemaExtractor.registerAdapter()`.
+- **Re-exported helpers** — `reportProgress`, `elicit`, `createBridgeContext`, `JWTAuthenticator`, `getCurrentIdentity`, `identityStorage` and associated types re-exported from `nestjs-apcore` for convenience.
+- **ID generation utilities** — `normalizeClassName`, `normalizeMethodName`, `generateModuleId` for consistent module ID generation (e.g. `EmailService.sendBatch` → `email.send_batch`).
+- **Demo app** — Complete NestJS application in `demo/` with `TodoModule` (CRUD + REST controller, dual-protocol) and `WeatherModule` (DI chain with `GeoService`). Demonstrates optional JWT authentication via `JWT_SECRET` env var and `getCurrentIdentity()` usage inside a tool method. Includes Dockerfile, docker-compose.yml, and README with test token and cURL examples.
+- **Test suite** — 358 tests across 17 test files covering all modules, services, decorators, schema adapters, YAML binding loader, ID generation utilities, and integration scenarios.

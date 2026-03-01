@@ -4,33 +4,32 @@
 
 | Feature | Document | Description |
 |---|---|---|
-| MCP Server Integration | [mcp-server-integration.md](mcp-server-integration.md) | Integrate apcore-mcp-typescript into NestJS lifecycle, expose Registry modules as MCP tools |
-| @ApTool Decorator + Scanner | [aptool-decorator-scanner.md](aptool-decorator-scanner.md) | Decorator system for marking NestJS service methods as apcore tools with auto-scanning |
-| Schema Extraction | [schema-extraction.md](schema-extraction.md) | Adapter system to extract JSON Schema from class-validator DTOs, Zod, and TypeBox |
-| NestJS DI Bridge | [di-bridge.md](di-bridge.md) | Zero-decorator integration via `registerService()` and YAML bindings |
+| MCP Server Integration | [mcp-server-integration.md](mcp-server-integration.md) | `ApcoreModule` and `ApcoreMcpModule` — core Registry/Executor wrappers and standalone MCP server lifecycle |
+| @ApTool Decorator + Scanner | [aptool-decorator-scanner.md](aptool-decorator-scanner.md) | Decorator system for marking NestJS service methods as apcore tools with auto-scanning at startup |
+| Schema Extraction | [schema-extraction.md](schema-extraction.md) | Priority-chain adapter system: TypeBox, Zod, JSON Schema, class-validator DTO → TSchema |
+| NestJS DI Bridge | [di-bridge.md](di-bridge.md) | Zero-decorator integration via `registerService()`, `registerMethod()`, and YAML bindings |
 
 ## Implementation Order
 
-Priority from high to low. Features higher in the list should be implemented first.
+Priority from high to low. Features higher in the list must be implemented first.
 
-1. **MCP Server Integration** — Foundation. All other features depend on `ApcoreModule`, `ApcoreRegistry`, `ApcoreExecutor`.
+1. **MCP Server Integration** — Foundation. All other features depend on `ApcoreModule`, `ApcoreRegistryService`, `ApcoreExecutorService`.
 2. **Schema Extraction** — Required by both @ApTool Scanner and DI Bridge for schema conversion.
 3. **@ApTool Decorator + Scanner** — Decorator-based registration path. Depends on MCP Server Integration and Schema Extraction.
-4. **NestJS DI Bridge** — Zero-decorator registration path. Depends on MCP Server Integration and Schema Extraction. Complements @ApTool Decorator.
+4. **NestJS DI Bridge** — Zero-decorator registration path. Depends on MCP Server Integration and Schema Extraction.
 
 ## Dependency Graph
 
 ```
-mcp-server-integration
+ApcoreModule (ApcoreRegistryService + ApcoreExecutorService)
         │
-        ├──────────────────┐
-        ▼                  ▼
-schema-extraction    (direct dep)
-        │                  │
-        ├──────┐           │
-        ▼      ▼           │
-aptool-decorator   di-bridge
-  -scanner
+        ├──────────────────────┐
+        ▼                      ▼
+SchemaExtraction          ApcoreMcpModule
+        │                      │
+        ├──────────┐           │
+        ▼          ▼           │
+ApToolScanner   DI Bridge ─────┘
 ```
 
-Both `aptool-decorator-scanner` and `di-bridge` depend on `mcp-server-integration` and `schema-extraction`. They are independent of each other and can be implemented in parallel after their dependencies are ready.
+`ApToolScannerService` and the DI Bridge both depend on `ApcoreModule` and `SchemaExtractor`. They are independent of each other and can be used together in the same app without conflict.

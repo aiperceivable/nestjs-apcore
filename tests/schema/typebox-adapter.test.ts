@@ -120,7 +120,7 @@ describe('TypeBoxAdapter', () => {
       const schema = Type.Object({ name: Type.String() });
       const extracted = adapter.extract(schema);
       const KIND = Symbol.for('TypeBox.Kind');
-      expect(KIND in (extracted as Record<symbol, unknown>)).toBe(true);
+      expect(KIND in (extracted as unknown as Record<symbol, unknown>)).toBe(true);
     });
   });
 
