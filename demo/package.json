@@ -1,7 +1,6 @@
 {
   "name": "nestjs-apcore-demo",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
   "scripts": {
     "build": "tsc",
