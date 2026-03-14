@@ -43,6 +43,20 @@ vi.mock('apcore-js', () => ({
     examples: opts.examples,
     execute: opts.execute,
   })),
+  normalizeResult: (v: unknown) => {
+    if (v == null) return {};
+    if (typeof v === 'object' && !Array.isArray(v)) return v;
+    return { result: v };
+  },
+  jsonSchemaToTypeBox: (schema: unknown) => schema,
+  DEFAULT_ANNOTATIONS: {
+    readonly: false,
+    destructive: false,
+    idempotent: false,
+    requiresApproval: false,
+    openWorld: true,
+    streaming: false,
+  },
 }));
 
 function createMockRegistryService() {
@@ -340,12 +354,13 @@ describe('ApToolScannerService', () => {
       );
     });
 
-    it('defaults to Type.Object({}) when no schema provided', async () => {
+    it('defaults to empty object schema when no schema provided', async () => {
       await buildTestModule(BasicService);
 
       const [, registeredModule] = mockRegistry.register.mock.calls[0];
-      expect(registeredModule.inputSchema).toEqual(t.Object({}));
-      expect(registeredModule.outputSchema).toEqual(t.Object({}));
+      // Schemas now flow through JSON Schema intermediate → jsonSchemaToTypeBox()
+      expect(registeredModule.inputSchema).toEqual({ type: 'object', properties: {} });
+      expect(registeredModule.outputSchema).toEqual({ type: 'object', properties: {} });
     });
   });
 
@@ -423,7 +438,7 @@ describe('ApToolScannerService', () => {
       await buildTestModule(AnnotatedModuleService);
 
       const [, registeredModule] = mockRegistry.register.mock.calls[0];
-      expect(registeredModule.annotations).toEqual({ destructive: true });
+      expect(registeredModule.annotations).toEqual(expect.objectContaining({ destructive: true }));
       expect(registeredModule.tags).toEqual(['tool-tag']);
     });
   });

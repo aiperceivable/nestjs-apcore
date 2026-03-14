@@ -1,17 +1,32 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
-import { serve, toOpenaiTools } from 'apcore-mcp';
-import type { OpenAIToolDef } from 'apcore-mcp';
+import { serve, asyncServe, toOpenaiTools } from 'apcore-mcp';
+import type { OpenAIToolDef, AsyncServeApp } from 'apcore-mcp';
 import { ApcoreRegistryService } from '../core/apcore-registry.service.js';
 import { ApcoreExecutorService } from '../core/apcore-executor.service.js';
 import { APCORE_MCP_MODULE_OPTIONS } from '../constants.js';
 import type { ApcoreMcpModuleOptions } from '../types.js';
 
+/** Keys shared between serve() and asyncServe() option forwarding. */
+const SHARED_OPTION_KEYS = [
+  'name', 'version', 'tags', 'prefix', 'validateInputs', 'logLevel',
+  'metricsCollector', 'authenticator', 'requireAuth', 'exemptPaths',
+  'approvalHandler', 'outputFormatter',
+] as const;
+
+/** Keys only used by serve() (transport-specific). */
+const SERVE_ONLY_KEYS = [
+  'transport', 'host', 'port', 'explorer', 'explorerPrefix', 'allowExecute',
+  'dynamic', 'onStartup', 'onShutdown', 'explorerTitle',
+  'explorerProjectName', 'explorerProjectUrl',
+] as const;
+
 /**
  * NestJS service that manages the MCP (Model Context Protocol) server lifecycle.
  *
- * Wraps the `serve()` and `toOpenaiTools()` functions from `apcore-mcp`,
- * integrating them with NestJS lifecycle hooks for automatic startup/shutdown.
+ * Wraps the `serve()`, `asyncServe()`, and `toOpenaiTools()` functions from
+ * `apcore-mcp`, integrating them with NestJS lifecycle hooks for automatic
+ * startup/shutdown.
  */
 @Injectable()
 export class ApcoreMcpService implements OnApplicationBootstrap, OnModuleDestroy {
@@ -54,29 +69,37 @@ export class ApcoreMcpService implements OnApplicationBootstrap, OnModuleDestroy
   async start(): Promise<void> {
     this._isRunning = true;
 
-    const serveOptions: Record<string, unknown> = {};
-
-    // Forward all relevant options to serve()
-    if (this.options.transport !== undefined) serveOptions.transport = this.options.transport;
-    if (this.options.host !== undefined) serveOptions.host = this.options.host;
-    if (this.options.port !== undefined) serveOptions.port = this.options.port;
-    if (this.options.name !== undefined) serveOptions.name = this.options.name;
-    if (this.options.version !== undefined) serveOptions.version = this.options.version;
-    if (this.options.tags !== undefined) serveOptions.tags = this.options.tags;
-    if (this.options.prefix !== undefined) serveOptions.prefix = this.options.prefix;
-    if (this.options.explorer !== undefined) serveOptions.explorer = this.options.explorer;
-    if (this.options.explorerPrefix !== undefined) serveOptions.explorerPrefix = this.options.explorerPrefix;
-    if (this.options.allowExecute !== undefined) serveOptions.allowExecute = this.options.allowExecute;
-    if (this.options.dynamic !== undefined) serveOptions.dynamic = this.options.dynamic;
-    if (this.options.validateInputs !== undefined) serveOptions.validateInputs = this.options.validateInputs;
-    if (this.options.logLevel !== undefined) serveOptions.logLevel = this.options.logLevel;
-    if (this.options.onStartup !== undefined) serveOptions.onStartup = this.options.onStartup;
-    if (this.options.onShutdown !== undefined) serveOptions.onShutdown = this.options.onShutdown;
-    if (this.options.metricsCollector !== undefined) serveOptions.metricsCollector = this.options.metricsCollector;
-    if (this.options.authenticator !== undefined) serveOptions.authenticator = this.options.authenticator;
-    if (this.options.exemptPaths !== undefined) serveOptions.exemptPaths = this.options.exemptPaths;
+    const serveOptions = {
+      ...this.collectOptions(SHARED_OPTION_KEYS),
+      ...this.collectOptions(SERVE_ONLY_KEYS),
+    };
 
     await serve(this.executor.raw, serveOptions);
+  }
+
+  /**
+   * Build an embeddable HTTP request handler without starting a standalone server.
+   *
+   * Returns an `AsyncServeApp` with `handler` and `close` methods, suitable for
+   * mounting into Express, Fastify, or any Node HTTP framework.
+   */
+  async asyncServe(options?: {
+    endpoint?: string;
+    explorer?: boolean;
+    explorerPrefix?: string;
+    allowExecute?: boolean;
+  }): Promise<AsyncServeApp> {
+    const asyncOptions: Record<string, unknown> = {
+      ...this.collectOptions(SHARED_OPTION_KEYS),
+    };
+
+    // Forward per-call options
+    if (options?.endpoint !== undefined) asyncOptions.endpoint = options.endpoint;
+    if (options?.explorer !== undefined) asyncOptions.explorer = options.explorer;
+    if (options?.explorerPrefix !== undefined) asyncOptions.explorerPrefix = options.explorerPrefix;
+    if (options?.allowExecute !== undefined) asyncOptions.allowExecute = options.allowExecute;
+
+    return asyncServe(this.executor.raw, asyncOptions);
   }
 
   /** Stops the MCP server. */
@@ -130,5 +153,26 @@ export class ApcoreMcpService implements OnApplicationBootstrap, OnModuleDestroy
     if (this._isRunning) {
       await this.stop();
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // Private helpers
+  // -----------------------------------------------------------------------
+
+  /**
+   * Collect defined option values from this.options for the given keys.
+   * Only includes keys whose values are not `undefined`.
+   */
+  private collectOptions(
+    keys: readonly string[],
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const key of keys) {
+      const value = (this.options as Record<string, unknown>)[key];
+      if (value !== undefined) {
+        result[key] = value;
+      }
+    }
+    return result;
   }
 }

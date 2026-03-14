@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Executor } from 'apcore-js';
-import type { Context, ValidationResult } from 'apcore-js';
+import type { Context, PreflightResult } from 'apcore-js';
 
 /**
  * NestJS-injectable wrapper around the upstream apcore-js {@link Executor}.
@@ -58,13 +58,18 @@ export class ApcoreExecutorService {
   /**
    * Validate inputs against a module's input schema without executing it.
    *
+   * Returns a PreflightResult containing per-check results, approval
+   * requirements, and overall validity.
+   *
    * @param moduleId  Fully-qualified module identifier.
-   * @param inputs    Key/value inputs to validate.
+   * @param inputs    Key/value inputs to validate (defaults to `{}`).
+   * @param context   Optional execution context for call-chain checks.
    */
   validate(
     moduleId: string,
-    inputs: Record<string, unknown>,
-  ): ValidationResult {
-    return this.executor.validate(moduleId, inputs);
+    inputs?: Record<string, unknown>,
+    context?: Context | null,
+  ): PreflightResult {
+    return this.executor.validate(moduleId, inputs ?? {}, context);
   }
 }

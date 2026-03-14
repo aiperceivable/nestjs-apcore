@@ -1,32 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { Type as t } from '@sinclair/typebox';
-import type { TSchema } from '@sinclair/typebox';
-import { FunctionModule } from 'apcore-js';
+import { normalizeResult } from 'apcore-js';
 import type { Registry } from 'apcore-js';
 import type { ModuleDescriptor } from 'apcore-js';
+import { createScannedModule, moduleToDict, modulesToDicts } from 'apcore-toolkit';
+import type { ScannedModule } from 'apcore-toolkit';
 import type { RegisterMethodOptions, RegisterServiceOptions } from '../types.js';
 import {
   normalizeClassName,
   normalizeMethodName,
   generateModuleId,
 } from '../utils/id-generator.js';
-
-/**
- * Normalize a method return value to a Record<string, unknown>.
- *
- * - null / undefined -> {}
- * - non-object (string, number, boolean) -> { result: value }
- * - object -> returned as-is
- */
-function normalizeReturnValue(value: unknown): Record<string, unknown> {
-  if (value == null) {
-    return {};
-  }
-  if (typeof value !== 'object' || Array.isArray(value)) {
-    return { result: value };
-  }
-  return value as Record<string, unknown>;
-}
+import {
+  scannedModuleToFunctionModule,
+  toModuleAnnotations,
+} from '../utils/module-factory.js';
 
 /**
  * Collect all own method names from a prototype chain up to (but not
@@ -54,7 +41,8 @@ function getAllMethodNames(instance: object): string[] {
 /**
  * NestJS-injectable service that wraps an upstream apcore-js Registry,
  * delegating core operations and adding convenience methods for
- * registering NestJS service methods as FunctionModules.
+ * registering NestJS service methods via apcore-toolkit's ScannedModule
+ * intermediate representation.
  */
 @Injectable()
 export class ApcoreRegistryService {
@@ -108,19 +96,64 @@ export class ApcoreRegistryService {
     return this.registry.count;
   }
 
+  // ---- serialisation helpers (via apcore-toolkit) ----
+
+  /**
+   * Convert a registered module's descriptor to a toolkit ScannedModule.
+   *
+   * Returns `null` if the module is not found.
+   */
+  toScannedModule(moduleId: string): ScannedModule | null {
+    const def = this.registry.getDefinition(moduleId);
+    if (!def) return null;
+
+    return createScannedModule({
+      moduleId: def.moduleId,
+      description: def.description,
+      inputSchema: def.inputSchema as Record<string, unknown>,
+      outputSchema: def.outputSchema as Record<string, unknown>,
+      tags: (def.tags as string[]) ?? [],
+      target: moduleId,
+      annotations: def.annotations ?? null,
+      documentation: def.documentation ?? null,
+      examples: (def.examples ?? []) as any[],
+      metadata: def.metadata ?? {},
+    });
+  }
+
+  /**
+   * Serialise a registered module to a plain snake_case dictionary
+   * via apcore-toolkit's `moduleToDict()`.
+   *
+   * Returns `null` if the module is not found.
+   */
+  toDict(moduleId: string): Record<string, unknown> | null {
+    const scanned = this.toScannedModule(moduleId);
+    if (!scanned) return null;
+    return moduleToDict(scanned);
+  }
+
+  /**
+   * Serialise all registered modules (optionally filtered by tags/prefix)
+   * to an array of snake_case dictionaries via apcore-toolkit.
+   */
+  toDicts(options?: { tags?: string[]; prefix?: string }): Record<string, unknown>[] {
+    const ids = this.registry.list(options);
+    const scanned: ScannedModule[] = [];
+    for (const id of ids) {
+      const s = this.toScannedModule(id);
+      if (s) scanned.push(s);
+    }
+    return modulesToDicts(scanned);
+  }
+
   // ---- NestJS convenience methods ----
 
   /**
    * Register a single method from a service instance as a FunctionModule.
    *
-   * Generates a module ID from the class name + method name when no
-   * explicit id is provided (e.g. EmailService.sendEmail -> email.send_email).
-   *
-   * The execute function calls the method on the bound instance and
-   * normalizes the return value:
-   *   - null / undefined -> {}
-   *   - non-object -> { result: value }
-   *   - object -> returned as-is
+   * Produces a toolkit {@link ScannedModule} intermediate, then converts it
+   * to a FunctionModule with the method bound to the service instance.
    *
    * @returns The module ID under which the method was registered.
    */
@@ -149,22 +182,27 @@ export class ApcoreRegistryService {
     const className = instance.constructor.name;
     const moduleId = generateModuleId(className, method, true, id);
 
-    const funcModule = new FunctionModule({
+    // Build ScannedModule intermediate via toolkit
+    const scanned = createScannedModule({
       moduleId,
       description,
-      inputSchema: (inputSchema as TSchema) ?? t.Object({}),
-      outputSchema: (outputSchema as TSchema) ?? t.Object({}),
-      tags: tags ?? null,
-      annotations: annotations as FunctionModule['annotations'],
+      inputSchema: (inputSchema as Record<string, unknown>) ?? { type: 'object', properties: {} },
+      outputSchema: (outputSchema as Record<string, unknown>) ?? { type: 'object', properties: {} },
+      tags: tags ?? [],
+      target: `${className}.${method}`,
+      annotations: toModuleAnnotations(annotations),
       documentation: documentation ?? null,
-      examples: examples ?? null,
-      execute: async (inputs) => {
-        const raw = await (fn as Function).call(instance, inputs);
-        return normalizeReturnValue(raw);
-      },
+      examples: examples ?? [],
     });
 
-    this.registry.register(moduleId, funcModule);
+    // Bound execute function using normalizeResult from apcore-js
+    const execute = async (inputs: Record<string, unknown>) => {
+      const raw = await (fn as Function).call(instance, inputs);
+      return normalizeResult(raw);
+    };
+
+    const fm = scannedModuleToFunctionModule(scanned, execute);
+    this.registry.register(moduleId, fm);
     return moduleId;
   }
 

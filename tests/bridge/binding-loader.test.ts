@@ -107,7 +107,7 @@ bindings:
       expect(registry.register).toHaveBeenCalledWith(
         'email.send',
         expect.objectContaining({
-          annotations: { destructive: true, readonly: false },
+          annotations: expect.objectContaining({ destructive: true, readonly: false }),
         }),
       );
     });
@@ -203,14 +203,16 @@ bindings:
 
       const call = (registry.register as ReturnType<typeof vi.fn>).mock.calls[0];
       const registeredModule = call[1];
-      expect(registeredModule.inputSchema).toEqual({
+      // Schemas are now converted via jsonSchemaToTypeBox() which adds
+      // TypeBox Symbol keys — compare JSON-serialisable structure only.
+      expect(JSON.parse(JSON.stringify(registeredModule.inputSchema))).toEqual({
         type: 'object',
         properties: {
           to: { type: 'string' },
           subject: { type: 'string' },
         },
       });
-      expect(registeredModule.outputSchema).toEqual({
+      expect(JSON.parse(JSON.stringify(registeredModule.outputSchema))).toEqual({
         type: 'object',
         properties: {
           sent: { type: 'boolean' },

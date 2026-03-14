@@ -179,19 +179,40 @@ describe('ApcoreExecutorService', () => {
   // -------------------------------------------------------------------------
   describe('validate', () => {
     it('delegates to executor.validate() and returns the result', () => {
-      const expected = { valid: true, errors: [] };
+      const expected = { valid: true, errors: [], checks: [], requiresApproval: false };
       validateSpy.mockReturnValueOnce(expected);
 
       const result = service.validate('mod.action', { key: 'value' });
 
-      expect(validateSpy).toHaveBeenCalledWith('mod.action', { key: 'value' });
+      expect(validateSpy).toHaveBeenCalledWith('mod.action', { key: 'value' }, undefined);
       expect(result).toEqual(expected);
+    });
+
+    it('normalizes undefined inputs to empty object', () => {
+      const expected = { valid: true, errors: [], checks: [], requiresApproval: false };
+      validateSpy.mockReturnValueOnce(expected);
+
+      service.validate('mod.action');
+
+      expect(validateSpy).toHaveBeenCalledWith('mod.action', {}, undefined);
+    });
+
+    it('passes context through to executor.validate()', () => {
+      const expected = { valid: true, errors: [], checks: [], requiresApproval: false };
+      validateSpy.mockReturnValueOnce(expected);
+      const ctx = { identity: { sub: 'user-1' } } as unknown as Context;
+
+      service.validate('mod.action', { key: 'value' }, ctx);
+
+      expect(validateSpy).toHaveBeenCalledWith('mod.action', { key: 'value' }, ctx);
     });
 
     it('returns validation errors when present', () => {
       const expected = {
         valid: false,
         errors: [{ field: 'key', message: 'required' }],
+        checks: [{ check: 'schema', passed: false, error: { field: 'key', message: 'required' } }],
+        requiresApproval: false,
       };
       validateSpy.mockReturnValueOnce(expected);
 

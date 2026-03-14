@@ -6,6 +6,9 @@ export type {
   Context,
   Identity,
   ModuleDescriptor,
+  PreflightResult,
+  PreflightCheckResult,
+  ValidationResult,
 } from 'apcore-js';
 
 // ---------------------------------------------------------------------------
@@ -20,6 +23,11 @@ export interface ApToolAnnotations {
   requiresApproval?: boolean;
   openWorld?: boolean;
   streaming?: boolean;
+  cacheable?: boolean;
+  cacheTtl?: number;
+  cacheKeyFields?: string[] | null;
+  paginated?: boolean;
+  paginationStyle?: 'cursor' | 'offset' | 'page';
 }
 
 /** Example entry for a tool invocation. */
@@ -87,14 +95,20 @@ export interface ApcoreMcpModuleOptions {
   explorer?: boolean;
   explorerPrefix?: string;
   allowExecute?: boolean;
+  explorerTitle?: string;
+  explorerProjectName?: string;
+  explorerProjectUrl?: string;
   dynamic?: boolean;
   validateInputs?: boolean;
   logLevel?: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
   onStartup?: () => void | Promise<void>;
   onShutdown?: () => void | Promise<void>;
-  metricsCollector?: { exportPrometheus(): string };
+  metricsCollector?: import('apcore-mcp').MetricsExporter;
   authenticator?: import('apcore-mcp').Authenticator;
+  requireAuth?: boolean;
   exemptPaths?: string[];
+  approvalHandler?: unknown;
+  outputFormatter?: (result: Record<string, unknown>) => string;
 }
 
 /** Async options for ApcoreMcpModule.forRootAsync(). */

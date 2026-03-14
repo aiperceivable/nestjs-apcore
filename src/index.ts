@@ -12,18 +12,56 @@ export { ApcoreMcpModule } from './mcp/apcore-mcp.module.js';
 export { ApcoreMcpService } from './mcp/apcore-mcp.service.js';
 
 // Re-export apcore-mcp helpers and types for convenience
-export { reportProgress, elicit, createBridgeContext } from 'apcore-mcp';
-export type { BridgeContext, OpenAIToolDef, ServeOptions, MetricsExporter, ElicitResult } from 'apcore-mcp';
+export { reportProgress, elicit, createBridgeContext, asyncServe, APCoreMCP } from 'apcore-mcp';
+export type {
+  BridgeContext,
+  OpenAIToolDef,
+  ServeOptions,
+  AsyncServeOptions,
+  AsyncServeApp,
+  MetricsExporter,
+  ElicitResult,
+  APCoreMCPOptions,
+  APCoreMCPServeOptions,
+  APCoreMCPAsyncServeOptions,
+  ToOpenaiToolsOptions,
+} from 'apcore-mcp';
 
 // Re-export apcore-mcp auth utilities
 export { JWTAuthenticator, getCurrentIdentity, identityStorage } from 'apcore-mcp';
 export type { Authenticator, ClaimMapping, JWTAuthenticatorOptions } from 'apcore-mcp';
 
 // ---------------------------------------------------------------------------
+// Toolkit (scanner & schema extraction from apcore-toolkit)
+// ---------------------------------------------------------------------------
+export {
+  BaseScanner,
+  createScannedModule,
+  cloneModule,
+  extractInputSchema,
+  extractOutputSchema,
+  resolveRef,
+  resolveSchema,
+  enrichSchemaDescriptions,
+  YAMLWriter,
+  TypeScriptWriter,
+  RegistryWriter,
+  getWriter,
+  moduleToDict,
+  modulesToDicts,
+  annotationsToDict,
+  resolveTarget,
+  flattenParams,
+  toMarkdown,
+} from 'apcore-toolkit';
+export type { ScannedModule } from 'apcore-toolkit';
+
+// ---------------------------------------------------------------------------
 // Decorators
 // ---------------------------------------------------------------------------
 export { ApTool, ApModule, ApContext } from './decorators/index.js';
 export { ApToolScannerService } from './decorators/ap-tool-scanner.service.js';
+export type { ScanOptions } from './decorators/ap-tool-scanner.service.js';
 
 // ---------------------------------------------------------------------------
 // Schema
@@ -49,6 +87,8 @@ export {
   normalizeMethodName,
   generateModuleId,
 } from './utils/id-generator.js';
+export { scannedModuleToFunctionModule, toModuleAnnotations } from './utils/module-factory.js';
+export type { BoundExecuteFn } from './utils/module-factory.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -72,6 +112,9 @@ export type {
   Context,
   Identity,
   ModuleDescriptor,
+  PreflightResult,
+  PreflightCheckResult,
+  ValidationResult,
   // Local types
   ApToolAnnotations,
   ApToolExample,

@@ -9,6 +9,10 @@ import type { ApcoreMcpModuleOptions } from '../../src/types.js';
 // ---------------------------------------------------------------------------
 vi.mock('apcore-mcp', () => ({
   serve: vi.fn().mockResolvedValue(undefined),
+  asyncServe: vi.fn().mockResolvedValue({
+    handler: vi.fn(),
+    close: vi.fn().mockResolvedValue(undefined),
+  }),
   toOpenaiTools: vi.fn().mockReturnValue([
     { type: 'function', function: { name: 'test_tool' } },
   ]),
@@ -188,7 +192,7 @@ describe('ApcoreMcpService', () => {
       });
     });
 
-    it('passes authenticator and exemptPaths to serve()', async () => {
+    it('passes authenticator, requireAuth, and exemptPaths to serve()', async () => {
       const mockAuthenticator = {
         authenticate: vi.fn().mockResolvedValue(null),
         requireAuth: true,
@@ -196,6 +200,7 @@ describe('ApcoreMcpService', () => {
       const opts: ApcoreMcpModuleOptions = {
         transport: 'streamable-http',
         authenticator: mockAuthenticator,
+        requireAuth: true,
         exemptPaths: ['/health', '/metrics', '/custom'],
       };
       service = new ApcoreMcpService(registry, executor, opts);
@@ -205,6 +210,7 @@ describe('ApcoreMcpService', () => {
       expect(serve).toHaveBeenCalledWith(executor.raw, {
         transport: 'streamable-http',
         authenticator: mockAuthenticator,
+        requireAuth: true,
         exemptPaths: ['/health', '/metrics', '/custom'],
       });
     });
@@ -311,6 +317,59 @@ describe('ApcoreMcpService', () => {
       expect(service.isRunning).toBe(false);
       await service.onModuleDestroy();
       expect(service.isRunning).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // asyncServe()
+  // -------------------------------------------------------------------------
+  describe('asyncServe()', () => {
+    it('returns an AsyncServeApp with handler and close', async () => {
+      const app = await service.asyncServe();
+      expect(app).toHaveProperty('handler');
+      expect(app).toHaveProperty('close');
+    });
+
+    it('forwards module-level options to asyncServe()', async () => {
+      const { asyncServe: mockAsyncServe } = await import('apcore-mcp');
+      const opts: ApcoreMcpModuleOptions = {
+        name: 'test',
+        version: '1.0.0',
+        authenticator: { authenticate: vi.fn().mockResolvedValue(null) },
+        requireAuth: false,
+      };
+      const svc = new ApcoreMcpService(registry, executor, opts);
+
+      await svc.asyncServe({ endpoint: '/custom-mcp' });
+
+      expect(mockAsyncServe).toHaveBeenCalledWith(
+        executor.raw,
+        expect.objectContaining({
+          name: 'test',
+          version: '1.0.0',
+          requireAuth: false,
+          endpoint: '/custom-mcp',
+        }),
+      );
+    });
+
+    it('forwards per-call explorer options', async () => {
+      const { asyncServe: mockAsyncServe } = await import('apcore-mcp');
+
+      await service.asyncServe({
+        explorer: true,
+        explorerPrefix: '/tools',
+        allowExecute: true,
+      });
+
+      expect(mockAsyncServe).toHaveBeenCalledWith(
+        executor.raw,
+        expect.objectContaining({
+          explorer: true,
+          explorerPrefix: '/tools',
+          allowExecute: true,
+        }),
+      );
     });
   });
 });

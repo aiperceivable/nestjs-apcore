@@ -563,4 +563,78 @@ describe('ApcoreRegistryService', () => {
       expect(ids).toContain('child.base_method');
     });
   });
+
+  // -----------------------------------------------------------------------
+  // Serialisation helpers (toScannedModule, toDict, toDicts)
+  // -----------------------------------------------------------------------
+  describe('serialisation helpers', () => {
+    it('toScannedModule returns null when module not found', () => {
+      (mockRegistry.getDefinition as ReturnType<typeof vi.fn>).mockReturnValueOnce(null);
+      expect(service.toScannedModule('nonexistent')).toBeNull();
+    });
+
+    it('toScannedModule converts a definition to ScannedModule', () => {
+      (mockRegistry.getDefinition as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+        moduleId: 'test.mod',
+        description: 'A test',
+        inputSchema: { type: 'object' },
+        outputSchema: { type: 'object' },
+        tags: ['t1'],
+        annotations: null,
+        documentation: 'Some docs',
+        examples: [],
+        metadata: {},
+      });
+
+      const scanned = service.toScannedModule('test.mod');
+      expect(scanned).not.toBeNull();
+      expect(scanned!.moduleId).toBe('test.mod');
+      expect(scanned!.description).toBe('A test');
+      expect(scanned!.documentation).toBe('Some docs');
+      expect([...scanned!.tags]).toEqual(['t1']);
+    });
+
+    it('toDict returns null when module not found', () => {
+      (mockRegistry.getDefinition as ReturnType<typeof vi.fn>).mockReturnValueOnce(null);
+      expect(service.toDict('nonexistent')).toBeNull();
+    });
+
+    it('toDict returns snake_case dictionary', () => {
+      (mockRegistry.getDefinition as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+        moduleId: 'test.mod',
+        description: 'A test',
+        inputSchema: { type: 'object' },
+        outputSchema: { type: 'object' },
+        tags: [],
+        annotations: null,
+        documentation: null,
+        examples: [],
+        metadata: {},
+      });
+
+      const dict = service.toDict('test.mod');
+      expect(dict).not.toBeNull();
+      expect(dict!.module_id).toBe('test.mod');
+      expect(dict!.input_schema).toBeDefined();
+      expect(dict!.output_schema).toBeDefined();
+    });
+
+    it('toDicts serialises all listed modules', () => {
+      (mockRegistry.list as ReturnType<typeof vi.fn>).mockReturnValueOnce(['a', 'b']);
+      (mockRegistry.getDefinition as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce({
+          moduleId: 'a', description: 'A', inputSchema: {}, outputSchema: {},
+          tags: [], annotations: null, documentation: null, examples: [], metadata: {},
+        })
+        .mockReturnValueOnce({
+          moduleId: 'b', description: 'B', inputSchema: {}, outputSchema: {},
+          tags: [], annotations: null, documentation: null, examples: [], metadata: {},
+        });
+
+      const dicts = service.toDicts();
+      expect(dicts).toHaveLength(2);
+      expect(dicts[0].module_id).toBe('a');
+      expect(dicts[1].module_id).toBe('b');
+    });
+  });
 });
