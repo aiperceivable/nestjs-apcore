@@ -4,7 +4,7 @@
 
 | Feature | Document | Description |
 |---|---|---|
-| MCP Server Integration | [mcp-server-integration.md](mcp-server-integration.md) | `ApcoreModule` and `ApcoreMcpModule` — core Registry/Executor wrappers and standalone MCP server lifecycle |
+| MCP Server Integration | [mcp-server-integration.md](mcp-server-integration.md) | `ApcoreModule` — core Registry/Executor wrappers, auto tool scanning, and integrated MCP server lifecycle |
 | @ApTool Decorator + Scanner | [aptool-decorator-scanner.md](aptool-decorator-scanner.md) | Decorator system for marking NestJS service methods as apcore tools with auto-scanning at startup |
 | Schema Extraction | [schema-extraction.md](schema-extraction.md) | Priority-chain adapter system: TypeBox, Zod, JSON Schema, class-validator DTO → TSchema |
 | NestJS DI Bridge | [di-bridge.md](di-bridge.md) | Zero-decorator integration via `registerService()`, `registerMethod()`, and YAML bindings |
@@ -21,11 +21,11 @@ Priority from high to low. Features higher in the list must be implemented first
 ## Dependency Graph
 
 ```
-ApcoreModule (ApcoreRegistryService + ApcoreExecutorService)
+ApcoreModule (Registry + Executor + Scanner + optional MCP)
         │
         ├──────────────────────┐
         ▼                      ▼
-SchemaExtraction          ApcoreMcpModule
+SchemaExtraction          ApcoreMcpModule (auto-imported via mcp option)
         │                      │
         ├──────────┐           │
         ▼          ▼           │
@@ -33,3 +33,22 @@ ApToolScanner   DI Bridge ─────┘
 ```
 
 `ApToolScannerService` and the DI Bridge both depend on `ApcoreModule` and `SchemaExtractor`. They are independent of each other and can be used together in the same app without conflict.
+
+## Module Architecture
+
+`ApcoreModule.forRoot()` is the single entry point. It:
+
+1. Creates `Registry` and `Executor` from `apcore-js`
+2. Provides `ApcoreRegistryService` and `ApcoreExecutorService` globally
+3. Includes `ApToolScannerService` automatically (scans on `OnModuleInit`)
+4. Optionally imports `ApcoreMcpModule` when `mcp` config is provided
+
+```typescript
+// Minimal — tools only, no MCP server
+ApcoreModule.forRoot()
+
+// Full — tools + MCP server
+ApcoreModule.forRoot({
+  mcp: { transport: 'streamable-http', port: 8000 },
+})
+```

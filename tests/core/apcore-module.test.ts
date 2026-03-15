@@ -3,6 +3,7 @@ import { Module, Injectable, Inject } from '@nestjs/common';
 import { ApcoreModule } from '../../src/core/apcore.module.js';
 import { ApcoreRegistryService } from '../../src/core/apcore-registry.service.js';
 import { ApcoreExecutorService } from '../../src/core/apcore-executor.service.js';
+import { ApcoreMcpService } from '../../src/mcp/apcore-mcp.service.js';
 import { APCORE_MODULE_OPTIONS } from '../../src/constants.js';
 import type { ApcoreModuleOptions } from '../../src/types.js';
 
@@ -162,6 +163,19 @@ describe('ApcoreModule', () => {
       expect(consumer.registry).toBeInstanceOf(ApcoreRegistryService);
       expect(consumer.executor).toBeInstanceOf(ApcoreExecutorService);
     });
+
+    it('integrates ApcoreMcpModule when mcp options are provided', async () => {
+      const module = await Test.createTestingModule({
+        imports: [
+          ApcoreModule.forRoot({
+            mcp: { transport: 'stdio', name: 'test-mcp' },
+          }),
+        ],
+      }).compile();
+
+      const mcpService = module.get(ApcoreMcpService);
+      expect(mcpService).toBeDefined();
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -294,6 +308,20 @@ describe('ApcoreModule', () => {
       const consumer = module.get(AsyncConsumerService);
       expect(consumer.registry).toBeInstanceOf(ApcoreRegistryService);
       expect(consumer.executor).toBeInstanceOf(ApcoreExecutorService);
+    });
+
+    it('integrates ApcoreMcpModule when mcp options are provided', async () => {
+      const module = await Test.createTestingModule({
+        imports: [
+          ApcoreModule.forRootAsync({
+            useFactory: async () => ({ extensionsDir: null }),
+            mcp: { transport: 'stdio', name: 'test-mcp-async' },
+          }),
+        ],
+      }).compile();
+
+      const mcpService = module.get(ApcoreMcpService);
+      expect(mcpService).toBeDefined();
     });
   });
 });

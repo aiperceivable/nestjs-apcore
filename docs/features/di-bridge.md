@@ -137,7 +137,11 @@ Collects all own and prototype methods (excluding `constructor`) up to but not i
 
 ```typescript
 @Module({
-  imports: [ApcoreModule.forRoot({}), ApcoreMcpModule.forRoot({ ... })],
+  imports: [
+    ApcoreModule.forRoot({
+      mcp: { transport: 'streamable-http', port: 8000 },
+    }),
+  ],
   providers: [PaymentService],
 })
 export class AppModule implements OnModuleInit {

@@ -4,6 +4,8 @@ import { Registry, Executor } from 'apcore-js';
 import type { ACL, Middleware } from 'apcore-js';
 import { ApcoreRegistryService } from './apcore-registry.service.js';
 import { ApcoreExecutorService } from './apcore-executor.service.js';
+import { ApToolScannerService } from '../decorators/ap-tool-scanner.service.js';
+import { ApcoreMcpModule } from '../mcp/apcore-mcp.module.js';
 import { APCORE_MODULE_OPTIONS } from '../constants.js';
 import type {
   ApcoreModuleOptions,
@@ -16,6 +18,9 @@ import type {
  * Marked `@Global()` so that {@link ApcoreRegistryService} and
  * {@link ApcoreExecutorService} are available application-wide without
  * importing this module into every feature module.
+ *
+ * Now also handles automatic tool discovery via {@link ApToolScannerService}
+ * and optional MCP server integration.
  */
 @Global()
 @Module({})
@@ -27,7 +32,7 @@ export class ApcoreModule {
    * wraps them in NestJS-injectable services, and exports them together with
    * the raw options token.
    */
-  static forRoot(options: ApcoreModuleOptions): DynamicModule {
+  static forRoot(options: ApcoreModuleOptions = {}): DynamicModule {
     const registry = new Registry({
       extensionsDir: options.extensionsDir ?? null,
     });
@@ -41,17 +46,25 @@ export class ApcoreModule {
     const registryService = new ApcoreRegistryService(registry);
     const executorService = new ApcoreExecutorService(executor);
 
+    const imports: any[] = [];
+    if (options.mcp) {
+      imports.push(ApcoreMcpModule.forRoot(options.mcp));
+    }
+
     return {
       module: ApcoreModule,
+      imports,
       providers: [
         { provide: APCORE_MODULE_OPTIONS, useValue: options },
         { provide: ApcoreRegistryService, useValue: registryService },
         { provide: ApcoreExecutorService, useValue: executorService },
+        ApToolScannerService,
       ],
       exports: [
         APCORE_MODULE_OPTIONS,
         ApcoreRegistryService,
         ApcoreExecutorService,
+        ApToolScannerService,
       ],
     };
   }
@@ -63,9 +76,14 @@ export class ApcoreModule {
    * ConfigService) are available to the factory function.
    */
   static forRootAsync(options: ApcoreModuleAsyncOptions): DynamicModule {
+    const imports: any[] = [...(options.imports ?? [])];
+    if (options.mcp) {
+      imports.push(ApcoreMcpModule.forRoot(options.mcp));
+    }
+
     return {
       module: ApcoreModule,
-      imports: (options.imports ?? []) as DynamicModule[],
+      imports,
       providers: [
         {
           provide: APCORE_MODULE_OPTIONS,
@@ -97,11 +115,13 @@ export class ApcoreModule {
           },
           inject: [APCORE_MODULE_OPTIONS, ApcoreRegistryService],
         },
+        ApToolScannerService,
       ],
       exports: [
         APCORE_MODULE_OPTIONS,
         ApcoreRegistryService,
         ApcoreExecutorService,
+        ApToolScannerService,
       ],
     };
   }

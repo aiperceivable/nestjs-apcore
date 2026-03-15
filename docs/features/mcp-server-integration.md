@@ -2,7 +2,9 @@
 
 ## Overview
 
-`ApcoreModule` and `ApcoreMcpModule` integrate the `apcore-js` and `apcore-mcp` libraries into the NestJS lifecycle. The MCP server runs as a **standalone HTTP server** on its own port (separate from the NestJS REST server), managed by `apcore-mcp`'s `serve()` function. `ApcoreMcpService` wraps the lifecycle and exposes OpenAI tool conversion.
+`ApcoreModule` integrates the `apcore-js` and `apcore-mcp` libraries into the NestJS lifecycle. It provides the core `Registry` and `Executor` as global singletons, auto-discovers `@ApTool` decorated methods via `ApToolScannerService`, and optionally starts the MCP server when `mcp` config is provided.
+
+The MCP server runs as a **standalone HTTP server** on its own port (separate from the NestJS REST server), managed by `apcore-mcp`'s `serve()` function.
 
 ## Dependencies
 
@@ -10,11 +12,11 @@
 - `apcore-mcp` — `serve()`, `toOpenaiTools()`, `Authenticator`, `JWTAuthenticator`
 - `@modelcontextprotocol/sdk` — MCP protocol (transitive via `apcore-mcp`)
 
-## Modules
+## ApcoreModule
 
-### ApcoreModule
+Root module. Creates and provides `ApcoreRegistryService`, `ApcoreExecutorService`, and `ApToolScannerService` as global NestJS singletons. Decorated `@Global()`.
 
-Root module. Creates and provides `ApcoreRegistryService` and `ApcoreExecutorService` as global NestJS singletons. Decorated `@Global()`.
+When `mcp` config is provided, `ApcoreMcpModule` is automatically imported — no need to configure it separately.
 
 **Config (`ApcoreModuleOptions`):**
 
@@ -24,19 +26,47 @@ Root module. Creates and provides `ApcoreRegistryService` and `ApcoreExecutorSer
 | `acl` | `unknown \| null` | `null` | ACL configuration passed to apcore-js Registry. |
 | `middleware` | `unknown[]` | `[]` | apcore middleware pipeline configuration. |
 | `bindings` | `string \| null` | `null` | Path for YAML binding file. |
+| `mcp` | `ApcoreMcpModuleOptions` | — | MCP server config. If provided, `ApcoreMcpModule` is auto-imported. |
 | `schema.adapters` | `string[]` | all | Limit which schema adapters are active. |
 | `schema.strictOutput` | `boolean` | `false` | If true, require explicit `outputSchema` on all tools. |
 
 **Registration:**
 
 ```typescript
-ApcoreModule.forRoot(options?)
-ApcoreModule.forRootAsync({ imports, useFactory, inject })
+// Sync — with MCP
+ApcoreModule.forRoot({
+  mcp: { transport: 'streamable-http', port: 8000 },
+})
+
+// Sync — without MCP
+ApcoreModule.forRoot()
+
+// Async — MCP config is a static field (not returned from factory)
+ApcoreModule.forRootAsync({
+  imports: [ConfigModule],
+  useFactory: (config: ConfigService) => ({
+    extensionsDir: config.get('EXTENSIONS_DIR'),
+  }),
+  inject: [ConfigService],
+  mcp: { transport: 'streamable-http', port: 8000 },
+})
 ```
 
-### ApcoreMcpModule
+> **Note on `forRootAsync`:** The `mcp` field is provided statically on the async options object, not returned from `useFactory`. This is because NestJS dynamic-module imports must be resolved at module-definition time, before the async factory executes.
 
-Starts the MCP server via `apcore-mcp`'s `serve()`. The server runs on its own port (e.g. 8000), completely independent of NestJS's HTTP server. Lifecycle is managed via `OnApplicationBootstrap` (starts after all tools are registered) and `OnModuleDestroy` (graceful shutdown).
+## ApcoreMcpModule (Standalone)
+
+For advanced use cases where you need separate control over the MCP server lifecycle, you can import `ApcoreMcpModule` directly instead of using the `mcp` option on `ApcoreModule`:
+
+```typescript
+@Module({
+  imports: [
+    ApcoreModule.forRoot(),
+    ApcoreMcpModule.forRoot({ transport: 'streamable-http', port: 8000 }),
+  ],
+})
+export class AppModule {}
+```
 
 **Config (`ApcoreMcpModuleOptions`):**
 
@@ -83,12 +113,12 @@ list(options?: { tags?: string[]; prefix?: string }): string[]
 getDefinition(moduleId: string): ModuleDescriptor | null
 on(event: string, callback: (moduleId: string, module: unknown) => void): void
 discover(): Promise<number>          // requires extensionsDir
-get count(): number                  // property
 
 // NestJS convenience methods (see di-bridge.md)
 registerMethod(options: RegisterMethodOptions): string
 registerService(options: RegisterServiceOptions): string[]
 
+get count(): number                  // property
 get raw(): Registry                  // access underlying apcore-js Registry
 ```
 
@@ -123,9 +153,11 @@ toOpenaiTools(options?: { embedAnnotations?: boolean; strict?: boolean; tags?: s
 1. `ApcoreModule` initialises:
    - Creates `Registry` and `Executor` from `apcore-js`
    - If `extensionsDir` is set, runs `registry.discover()`
-   - Provides `ApcoreRegistryService` and `ApcoreExecutorService` globally
+   - Provides `ApcoreRegistryService`, `ApcoreExecutorService`, and `ApToolScannerService` globally
 
-2. Other modules initialise (decorators scanned, bindings loaded) via `OnModuleInit`
+2. `ApToolScannerService.onModuleInit()` fires:
+   - Scans all providers via `ModulesContainer`
+   - Registers all `@ApTool` decorated methods as `FunctionModule` instances
 
 3. `ApcoreMcpService.onApplicationBootstrap()` fires (after all `onModuleInit` hooks):
    - Calls `serve(executor.raw, options)` from `apcore-mcp`
@@ -158,11 +190,14 @@ When `authenticator` is set:
 - Additional exempt paths configurable via `exemptPaths`
 
 ```typescript
-const jwtSecret = process.env.JWT_SECRET;
-ApcoreMcpModule.forRoot({
-  transport: 'streamable-http',
-  port: 8000,
-  authenticator: jwtSecret ? new JWTAuthenticator({ secret: jwtSecret }) : undefined,
+ApcoreModule.forRoot({
+  mcp: {
+    transport: 'streamable-http',
+    port: 8000,
+    authenticator: process.env.JWT_SECRET
+      ? new JWTAuthenticator({ secret: process.env.JWT_SECRET })
+      : undefined,
+  },
 })
 ```
 
@@ -179,13 +214,13 @@ ApcoreMcpModule.forRoot({
 ```typescript
 @Module({
   imports: [
-    ApcoreModule.forRoot({}),
-    ApcoreMcpModule.forRoot({
-      transport: 'streamable-http',
-      port: 8000,
+    ApcoreModule.forRoot({
+      mcp: {
+        transport: 'streamable-http',
+        port: 8000,
+      },
     }),
   ],
-  providers: [ApToolScannerService],
 })
 export class AppModule {}
 ```
@@ -195,18 +230,18 @@ export class AppModule {}
 ```typescript
 @Module({
   imports: [
-    ApcoreModule.forRoot({}),
-    ApcoreMcpModule.forRootAsync({
+    ApcoreModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        transport: config.get('MCP_TRANSPORT', 'streamable-http'),
-        port: config.get<number>('MCP_PORT', 8000),
-        name: config.get('APP_NAME', 'my-app'),
-        authenticator: config.get('JWT_SECRET')
-          ? new JWTAuthenticator({ secret: config.get('JWT_SECRET') })
-          : undefined,
+        extensionsDir: config.get('EXTENSIONS_DIR'),
       }),
       inject: [ConfigService],
+      // MCP config is static (evaluated at module-definition time, not from factory)
+      mcp: {
+        transport: 'streamable-http',
+        port: 8000,
+        name: 'my-app',
+      },
     }),
   ],
 })

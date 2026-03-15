@@ -2,7 +2,9 @@
 
 ## Overview
 
-Decorator system that marks NestJS service methods as apcore tools, plus `ApToolScannerService` which discovers all decorated methods at `OnModuleInit`, generates module IDs, extracts schemas, and registers each as a `FunctionModule` in `ApcoreRegistryService`. No manual registration required — add decorators, add `ApToolScannerService` to providers, done.
+Decorator system that marks NestJS service methods as apcore tools, plus `ApToolScannerService` which discovers all decorated methods at `OnModuleInit`, generates module IDs, extracts schemas, and registers each as a `FunctionModule` in `ApcoreRegistryService`. No manual registration required — add decorators and import `ApcoreModule`, done.
+
+`ApToolScannerService` is automatically included in `ApcoreModule`'s providers — you do not need to add it to your own module's `providers` array.
 
 ## Dependencies
 
@@ -96,7 +98,7 @@ Module ID is resolved in priority order:
 
 ### ApToolScannerService
 
-NestJS injectable service. Add it to your root module's `providers` array. It runs at `OnModuleInit`, iterating all providers in `ModulesContainer`.
+NestJS injectable service. It is **automatically provided** by `ApcoreModule` — you do not need to add it to your module's `providers`. It runs at `OnModuleInit`, iterating all providers in `ModulesContainer`.
 
 **Scan process:**
 
@@ -209,26 +211,17 @@ export class AuditService {
 ```typescript
 @Module({
   imports: [
-    ApcoreModule.forRoot({}),
-    ApcoreMcpModule.forRoot({ transport: 'streamable-http', port: 8000 }),
+    ApcoreModule.forRoot({
+      mcp: { transport: 'streamable-http', port: 8000 },
+    }),
     OrderModule,
     EmailModule,
   ],
-  providers: [ApToolScannerService],
 })
 export class AppModule {}
 ```
 
-**Note:** With a file-linked local package (`nestjs-apcore: "file:.."`), use a `useFactory` provider to resolve `ApToolScannerService`:
-
-```typescript
-{
-  provide: ApToolScannerService,
-  useFactory: (registry: ApcoreRegistryService, container: ModulesContainer) =>
-    new ApToolScannerService(registry, container),
-  inject: [ApcoreRegistryService, ModulesContainer],
-}
-```
+That's it — `ApToolScannerService` is included automatically by `ApcoreModule`. No manual provider wiring needed.
 
 ## Error Handling
 

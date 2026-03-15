@@ -68,6 +68,8 @@ export interface ApcoreModuleOptions {
   acl?: unknown | null;
   middleware?: unknown[];
   bindings?: string | null;
+  /** Optional configuration for the MCP server. If provided, ApcoreMcpModule will be automatically imported. */
+  mcp?: ApcoreMcpModuleOptions;
   schema?: {
     adapters?: string[];
     strictOutput?: boolean;
@@ -81,6 +83,14 @@ export interface ApcoreModuleAsyncOptions {
     ...args: unknown[]
   ) => Promise<ApcoreModuleOptions> | ApcoreModuleOptions;
   inject?: unknown[];
+  /**
+   * Static MCP configuration — evaluated at module-definition time.
+   *
+   * Because `useFactory` resolves asynchronously, dynamic-module imports
+   * (like ApcoreMcpModule) must be decided statically. Provide MCP config
+   * here rather than returning it from the factory.
+   */
+  mcp?: ApcoreMcpModuleOptions;
 }
 
 /** Options for ApcoreMcpModule.forRoot(). */

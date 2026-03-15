@@ -25,7 +25,6 @@ import { ApcoreExecutorService } from '../../src/core/apcore-executor.service.js
 import { ApTool } from '../../src/decorators/ap-tool.decorator.js';
 import { ApModule } from '../../src/decorators/ap-module.decorator.js';
 import { ApContext } from '../../src/decorators/ap-context.decorator.js';
-import { ApToolScannerService } from '../../src/decorators/ap-tool-scanner.service.js';
 
 // ---------------------------------------------------------------------------
 // Test 1: Decorator-based registration and execution
@@ -104,7 +103,7 @@ describe('E2E Integration Tests (real apcore-js)', () => {
     beforeAll(async () => {
       module = await Test.createTestingModule({
         imports: [ApcoreModule.forRoot({}), DiscoveryModule],
-        providers: [GreetingService, ApToolScannerService],
+        providers: [GreetingService],
       }).compile();
 
       // Trigger OnModuleInit hooks (runs the ApToolScannerService)
@@ -314,7 +313,7 @@ describe('E2E Integration Tests (real apcore-js)', () => {
     beforeAll(async () => {
       module = await Test.createTestingModule({
         imports: [ApcoreModule.forRoot({}), DiscoveryModule],
-        providers: [ContextAwareService, ApToolScannerService],
+        providers: [ContextAwareService],
       }).compile();
 
       await module.init();

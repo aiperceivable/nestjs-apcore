@@ -1,6 +1,6 @@
 {
   "name": "nestjs-apcore",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "NestJS adapter for the apcore AI-Perceivable module ecosystem",
   "type": "module",
   "main": "./dist/index.js",

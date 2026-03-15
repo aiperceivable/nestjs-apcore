@@ -5,7 +5,8 @@ NestJS adapter for the [apcore](https://github.com/aipartnerup/apcore-js) AI-Per
 ## Features
 
 - **Decorator-driven** — Mark methods with `@ApTool` and classes with `@ApModule` to expose them as AI tools
-- **Auto-discovery** — `ApToolScannerService` scans all providers at startup and registers decorated methods automatically
+- **Auto-discovery** — tools are scanned and registered at startup automatically
+- **One-stop setup** — `ApcoreModule.forRoot()` handles Registry, Executor, Scanner, and optional MCP server in a single call
 - **Multi-schema support** — TypeBox, Zod, class-validator DTOs, and plain JSON Schema, auto-detected via a priority chain
 - **MCP server built-in** — Serve tools over stdio, Streamable HTTP, or SSE transports with optional Tool Explorer UI
 - **OpenAI-compatible** — Convert registered tools to OpenAI function-calling format with `toOpenaiTools()`
@@ -36,26 +37,26 @@ npm install @sinclair/typebox                  # TypeBoxAdapter (recommended)
 
 ## Quick Start
 
-### 1. Wire up modules
+### 1. Wire up the module
 
 ```typescript
 // app.module.ts
 import { Module } from '@nestjs/common';
-import { ApcoreModule, ApcoreMcpModule, ApToolScannerService } from 'nestjs-apcore';
+import { ApcoreModule } from 'nestjs-apcore';
 
 @Module({
   imports: [
-    ApcoreModule.forRoot({}),
-    ApcoreMcpModule.forRoot({
-      transport: 'streamable-http',
-      port: 8000,
-      name: 'my-app',
-      version: '1.0.0',
-      explorer: true,
+    ApcoreModule.forRoot({
+      mcp: {
+        transport: 'streamable-http',
+        port: 8000,
+        name: 'my-app',
+        explorer: true,
+        allowExecute: true,
+      },
     }),
     TodoModule,
   ],
-  providers: [ApToolScannerService],
 })
 export class AppModule {}
 ```
@@ -127,47 +128,64 @@ Your service is now available as:
 
 ## API Reference
 
-### Modules
+### ApcoreModule
 
-#### `ApcoreModule`
-
-Provides the core `Registry` and `Executor` as NestJS singletons.
+The single entry point. Provides the core `Registry`, `Executor`, and `ApToolScannerService` as global NestJS singletons. Optionally integrates the MCP server.
 
 ```typescript
-// Sync
-ApcoreModule.forRoot({ extensionsDir?, acl?, middleware?, bindings? })
+// Sync — with MCP server
+ApcoreModule.forRoot({
+  extensionsDir?: string | null,
+  acl?: unknown,
+  middleware?: unknown[],
+  mcp?: ApcoreMcpModuleOptions,  // if provided, MCP server starts automatically
+})
+
+// Sync — without MCP (Registry + Executor only)
+ApcoreModule.forRoot()
 
 // Async (e.g. inject ConfigService)
-ApcoreModule.forRootAsync({ imports, useFactory, inject })
+ApcoreModule.forRootAsync({
+  imports: [ConfigModule],
+  useFactory: (config: ConfigService) => ({
+    extensionsDir: config.get('EXTENSIONS_DIR'),
+  }),
+  inject: [ConfigService],
+  mcp: { transport: 'streamable-http', port: 8000 },  // static, evaluated at definition time
+})
 ```
 
-#### `ApcoreMcpModule`
+#### MCP Options
 
-Configures and starts the MCP server.
+| Field | Type | Description |
+|---|---|---|
+| `transport` | `'stdio' \| 'streamable-http' \| 'sse'` | Transport protocol |
+| `host` | `string` | Bind host |
+| `port` | `number` | Bind port |
+| `name` | `string` | Server name |
+| `version` | `string` | Server version |
+| `explorer` | `boolean` | Enable Tool Explorer web UI |
+| `allowExecute` | `boolean` | Allow tool execution from Explorer |
+| `authenticator` | `Authenticator` | JWT or custom auth strategy |
+| `tags` | `string[]` | Only expose tools with these tags |
+| `prefix` | `string` | Only expose tools with this ID prefix |
+| `logLevel` | `string` | `'DEBUG' \| 'INFO' \| 'WARNING' \| 'ERROR' \| 'CRITICAL'` |
+| `metricsCollector` | `MetricsExporter` | Enables `/metrics` Prometheus endpoint |
+| `onStartup` | `() => void` | Callback after server starts |
+| `onShutdown` | `() => void` | Callback before server stops |
 
-The MCP server runs **standalone on its own port** (e.g. 8000), separate from NestJS's REST server (e.g. 3000). Both share the same Registry and Executor instances.
+#### Standalone MCP Module
+
+If you prefer to configure the MCP server separately (e.g. different lifecycle), you can import `ApcoreMcpModule` directly:
 
 ```typescript
-ApcoreMcpModule.forRoot({
-  transport: 'stdio' | 'streamable-http' | 'sse',
-  host?: string,
-  port?: number,
-  name?: string,
-  version?: string,
-  tags?: string[],          // only expose tools matching these tags
-  prefix?: string,          // only expose tools with this ID prefix
-  explorer?: boolean,       // enable Tool Explorer web UI
-  explorerPrefix?: string,  // URL prefix for the Explorer
-  allowExecute?: boolean,   // allow execution from Explorer
-  dynamic?: boolean,        // enable dynamic tool list updates
-  validateInputs?: boolean,
-  logLevel?: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL',
-  authenticator?: Authenticator,   // JWT or custom auth
-  exemptPaths?: string[],          // paths that bypass auth (default: ['/health', '/metrics'])
-  metricsCollector?: { exportPrometheus(): string },
-  onStartup?: () => void | Promise<void>,
-  onShutdown?: () => void | Promise<void>,
+@Module({
+  imports: [
+    ApcoreModule.forRoot(),
+    ApcoreMcpModule.forRoot({ transport: 'streamable-http', port: 8000 }),
+  ],
 })
+export class AppModule {}
 ```
 
 ### Decorators
@@ -242,17 +260,20 @@ bindings:
 
 ### JWT Authentication
 
-Enable JWT auth by passing a `JWTAuthenticator` to `ApcoreMcpModule`. The Explorer UI and `/health` endpoint are always exempt.
+Enable JWT auth by passing a `JWTAuthenticator` in the `mcp` config. The Explorer UI and `/health` endpoint are always exempt.
 
 ```typescript
-import { JWTAuthenticator, getCurrentIdentity } from 'nestjs-apcore';
+import { ApcoreModule, JWTAuthenticator, getCurrentIdentity } from 'nestjs-apcore';
 
 // In app.module.ts
-const jwtSecret = process.env.JWT_SECRET;
-ApcoreMcpModule.forRoot({
-  transport: 'streamable-http',
-  port: 8000,
-  authenticator: jwtSecret ? new JWTAuthenticator({ secret: jwtSecret }) : undefined,
+ApcoreModule.forRoot({
+  mcp: {
+    transport: 'streamable-http',
+    port: 8000,
+    authenticator: process.env.JWT_SECRET
+      ? new JWTAuthenticator({ secret: process.env.JWT_SECRET })
+      : undefined,
+  },
 })
 
 // Inside any @ApTool method
@@ -262,8 +283,6 @@ list(inputs: Record<string, unknown>) {
 }
 ```
 
-`JWTAuthenticator` options: `secret`, `algorithms` (default `['HS256']`), `audience`, `issuer`, `claimMapping`, `requireClaims`, `requireAuth` (default `true`).
-
 ### Re-exported Utilities
 
 From `apcore-mcp`:
@@ -272,7 +291,7 @@ From `apcore-mcp`:
 
 ## Examples
 
-The `demo/` directory contains a full working app with Todo and Weather services:
+The [`demo/`](./demo) directory contains a full working app with Todo and Weather services:
 
 ```bash
 cd demo
@@ -280,12 +299,15 @@ npm install
 npx tsx src/main.ts
 ```
 
-Or with Docker:
+## Detailed Documentation
 
-```bash
-cd demo
-docker compose up --build
-```
+For in-depth documentation on each subsystem, see [`docs/features/`](./docs/features/):
+
+- [Feature Overview](./docs/features/overview.md) — architecture and dependency graph
+- [MCP Server Integration](./docs/features/mcp-server-integration.md) — module configuration, services API, dual-server architecture
+- [@ApTool Decorator + Scanner](./docs/features/aptool-decorator-scanner.md) — decorators, ID generation, scan process
+- [Schema Extraction](./docs/features/schema-extraction.md) — adapter chain, supported types, custom adapters
+- [NestJS DI Bridge](./docs/features/di-bridge.md) — `registerMethod()`, `registerService()`, YAML bindings
 
 ## Scripts
 
