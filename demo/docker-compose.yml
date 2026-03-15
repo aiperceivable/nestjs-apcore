@@ -2,7 +2,7 @@ services:
   demo:
     build:
       context: ../
-      dockerfile: examples/Dockerfile
+      dockerfile: demo/Dockerfile
     ports:
       - "3000:3000"
       - "8000:8000"
