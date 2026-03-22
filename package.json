@@ -1,6 +1,6 @@
 {
   "name": "nestjs-apcore",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "NestJS adapter for the apcore AI-Perceivable module ecosystem",
   "type": "module",
   "main": "./dist/index.js",
@@ -89,14 +89,14 @@
     "decorator",
     "typescript"
   ],
-  "author": "aipartnerup",
-  "homepage": "https://github.com/aipartnerup/nestjs-apcore#readme",
+  "author": "aiperceivable",
+  "homepage": "https://github.com/aiperceivable/nestjs-apcore#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aipartnerup/nestjs-apcore.git"
+    "url": "https://github.com/aiperceivable/nestjs-apcore.git"
   },
   "bugs": {
-    "url": "https://github.com/aipartnerup/nestjs-apcore/issues"
+    "url": "https://github.com/aiperceivable/nestjs-apcore/issues"
   },
   "license": "Apache-2.0",
   "apdev": {

@@ -1,6 +1,6 @@
 # nestjs-apcore
 
-NestJS adapter for the [apcore](https://github.com/aipartnerup/apcore-js) AI-Perceivable module ecosystem. Turn your existing NestJS services into AI-callable [MCP](https://modelcontextprotocol.io/) tools and OpenAI-compatible function definitions — with zero changes to your business logic.
+NestJS adapter for the [apcore](https://github.com/aiperceivable/apcore-js) AI-Perceivable module ecosystem. Turn your existing NestJS services into AI-callable [MCP](https://modelcontextprotocol.io/) tools and OpenAI-compatible function definitions — with zero changes to your business logic.
 
 ## Features
 
