@@ -68,8 +68,12 @@ export interface ApcoreModuleOptions {
   acl?: unknown | null;
   middleware?: unknown[];
   bindings?: string | null;
-  /** Optional configuration for the MCP server. If provided, ApcoreMcpModule will be automatically imported. */
+  /** Optional MCP server configuration. If provided, ApcoreMcpModule is automatically imported. */
   mcp?: ApcoreMcpModuleOptions;
+  /** Optional CLI configuration. If provided, ApcoreCliModule is automatically imported. */
+  cli?: ApcoreCliModuleOptions;
+  /** Optional A2A server configuration. If provided, ApcoreA2aModule is automatically imported. */
+  a2a?: ApcoreA2aModuleOptions;
   schema?: {
     adapters?: string[];
     strictOutput?: boolean;
@@ -84,13 +88,15 @@ export interface ApcoreModuleAsyncOptions {
   ) => Promise<ApcoreModuleOptions> | ApcoreModuleOptions;
   inject?: unknown[];
   /**
-   * Static MCP configuration — evaluated at module-definition time.
+   * Static surface configurations — evaluated at module-definition time.
    *
    * Because `useFactory` resolves asynchronously, dynamic-module imports
-   * (like ApcoreMcpModule) must be decided statically. Provide MCP config
-   * here rather than returning it from the factory.
+   * must be decided statically. Provide surface config here rather than
+   * returning it from the factory.
    */
   mcp?: ApcoreMcpModuleOptions;
+  cli?: ApcoreCliModuleOptions;
+  a2a?: ApcoreA2aModuleOptions;
 }
 
 /** Options for ApcoreMcpModule.forRoot(). */
@@ -127,6 +133,85 @@ export interface ApcoreMcpModuleAsyncOptions {
   useFactory: (
     ...args: unknown[]
   ) => Promise<ApcoreMcpModuleOptions> | ApcoreMcpModuleOptions;
+  inject?: unknown[];
+}
+
+/** Options for ApcoreCliModule.forRoot(). */
+export interface ApcoreCliModuleOptions {
+  /** Path to the extensions directory (default: ./extensions). */
+  extensionsDir?: string;
+  /** Program name shown in help output (default: inferred from argv). */
+  progName?: string;
+  /**
+   * Show all options in `--help` output, including built-in apcore options.
+   * Users can also toggle this at runtime with `--help --verbose`.
+   * Default: false.
+   */
+  verboseHelp?: boolean;
+  /**
+   * Base URL for online documentation.
+   *
+   * Per-command help shows `Docs: {url}/commands/{name}`.
+   * Man page SEE ALSO includes `Full documentation at {url}`.
+   * No default — disabled when not set.
+   */
+  docsUrl?: string | null;
+}
+
+/** Async options for ApcoreCliModule.forRootAsync(). */
+export interface ApcoreCliModuleAsyncOptions {
+  imports?: unknown[];
+  useFactory: (
+    ...args: unknown[]
+  ) => Promise<ApcoreCliModuleOptions> | ApcoreCliModuleOptions;
+  inject?: unknown[];
+}
+
+/** Options for ApcoreA2aModule.forRoot(). */
+export interface ApcoreA2aModuleOptions {
+  /** Agent card name (default: inferred from registry config). */
+  name?: string;
+  /** Agent card description (default: inferred from registry config). */
+  description?: string;
+  /** Agent card version (default: inferred from registry config). */
+  version?: string;
+  /** Public URL of this A2A server (used in the agent card). */
+  url?: string;
+  /** Host address for the standalone HTTP server. Default: "0.0.0.0". */
+  host?: string;
+  /**
+   * Port for the standalone HTTP server.
+   *
+   * When set, `ApcoreA2aService` starts a standalone server on
+   * `onApplicationBootstrap`. Omit to use `asyncServe()` for embedding.
+   */
+  port?: number;
+  /** Optional Authenticator for request auth. */
+  auth?: unknown;
+  /** Optional task store for A2A task persistence. */
+  taskStore?: unknown;
+  /** CORS allowed origins. */
+  corsOrigins?: string[];
+  /** Enable the A2A explorer UI. Default: false. */
+  explorer?: boolean;
+  /** URL prefix for the explorer. Default: "/explorer". */
+  explorerPrefix?: string;
+  /** Execution timeout in milliseconds. Default: 300000 (5 minutes). */
+  executionTimeout?: number;
+  /** Enable Prometheus /metrics endpoint. Default: false. */
+  metrics?: boolean;
+  /** Log level for the standalone server. */
+  logLevel?: string;
+  /** Graceful shutdown timeout in seconds. Default: 30. */
+  shutdownTimeout?: number;
+}
+
+/** Async options for ApcoreA2aModule.forRootAsync(). */
+export interface ApcoreA2aModuleAsyncOptions {
+  imports?: unknown[];
+  useFactory: (
+    ...args: unknown[]
+  ) => Promise<ApcoreA2aModuleOptions> | ApcoreA2aModuleOptions;
   inject?: unknown[];
 }
 

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-03-30
+
+### Added
+
+- **CLI module** — `ApcoreCliModule.forRoot()` and `ApcoreCliService` for integrating `apcore-cli` into a NestJS application. `ApcoreModule.forRoot()` / `forRootAsync()` now accept an optional `cli` config and automatically import `ApcoreCliModule`.
+- **A2A module** — `ApcoreA2aModule.forRoot()` and `ApcoreA2aService` for integrating the Agent-to-Agent (`apcore-a2a`) protocol server. `ApcoreModule.forRoot()` / `forRootAsync()` now accept an optional `a2a` config and automatically import `ApcoreA2aModule`.
+- **CLI re-exports** — `createCli`, `buildModuleCommand`, `LazyModuleGroup`, `GroupedModuleGroup`, `BUILTIN_COMMANDS`, audit-logger helpers (`AuditLogger`, `setAuditLogger`, `getAuditLogger`), auth/security primitives (`AuthProvider`, `ConfigEncryptor`, `Sandbox`), error classes (`ApprovalTimeoutError`, `ApprovalDeniedError`, `AuthenticationError`, `ConfigDecryptionError`, `ModuleExecutionError`, `ModuleNotFoundError`, `SchemaValidationError`), formatting utilities, and `EXIT_CODES` / `exitCodeForError` re-exported from `nestjs-apcore`.
+- **A2A re-exports** — `serveA2A`, `asyncServeA2A`, `A2AJWTAuthenticator`, and associated `A2AAuthenticator` / `A2AClaimMapping` types re-exported for convenience.
+- **Toolkit additions** — `deepResolveRefs`, `AIEnhancer`, `DisplayResolver`, `createWriteResult`, `WriteError`, verifier chain utilities (`YAMLVerifier`, `SyntaxVerifier`, `RegistryVerifier`, `MagicBytesVerifier`, `JSONVerifier`, `runVerifierChain`), and related option types re-exported from `apcore-toolkit`.
+- **DI tokens** — `APCORE_CLI_MODULE_OPTIONS` and `APCORE_A2A_MODULE_OPTIONS` constants exported for custom provider overrides.
+
 ## [0.3.2] - 2026-03-22
 
 ### Changed

@@ -1,6 +1,8 @@
 // NestJS dependency-injection tokens
 export const APCORE_MODULE_OPTIONS = 'APCORE_MODULE_OPTIONS' as const;
 export const APCORE_MCP_MODULE_OPTIONS = 'APCORE_MCP_MODULE_OPTIONS' as const;
+export const APCORE_CLI_MODULE_OPTIONS = 'APCORE_CLI_MODULE_OPTIONS' as const;
+export const APCORE_A2A_MODULE_OPTIONS = 'APCORE_A2A_MODULE_OPTIONS' as const;
 
 // Reflect metadata keys used by decorators
 export const AP_TOOL_METADATA_KEY = 'apcore:tool' as const;

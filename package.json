@@ -1,6 +1,6 @@
 {
   "name": "nestjs-apcore",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "NestJS adapter for the apcore AI-Perceivable module ecosystem",
   "type": "module",
   "main": "./dist/index.js",
@@ -32,7 +32,9 @@
   "peerDependencies": {
     "@nestjs/common": ">=10.0.0",
     "@nestjs/core": ">=10.0.0",
-    "apcore-mcp": "^0.10.0",
+    "apcore-mcp": ">=0.11.0",
+    "apcore-cli": ">=0.4.0",
+    "apcore-a2a": ">=0.3.0",
     "reflect-metadata": ">=0.1.13",
     "rxjs": ">=7.0.0"
   },
@@ -48,12 +50,18 @@
     },
     "apcore-mcp": {
       "optional": true
+    },
+    "apcore-cli": {
+      "optional": true
+    },
+    "apcore-a2a": {
+      "optional": true
     }
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "apcore-js": "^0.13.0",
-    "apcore-toolkit": "^0.2.0",
+    "apcore-js": ">=0.14.0",
+    "apcore-toolkit": "^0.4.0",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
@@ -65,7 +73,9 @@
     "@types/js-yaml": "^4.0.0",
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^3.0.0",
-    "apcore-mcp": "^0.10.0",
+    "apcore-mcp": "^0.11.0",
+    "apcore-cli": "^0.4.0",
+    "apcore-a2a": "^0.3.0",
     "apdev-js": "^0.2.0",
     "class-transformer": "^0.5.0",
     "class-validator": "^0.14.0",

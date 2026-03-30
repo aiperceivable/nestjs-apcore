@@ -37,6 +37,30 @@ describe('Public API exports (src/index.ts)', () => {
     expect(typeof api.ApcoreMcpService).toBe('function');
   });
 
+  // ---- CLI ----
+
+  it('exports ApcoreCliModule', () => {
+    expect(api.ApcoreCliModule).toBeDefined();
+    expect(typeof api.ApcoreCliModule).toBe('function');
+  });
+
+  it('exports ApcoreCliService', () => {
+    expect(api.ApcoreCliService).toBeDefined();
+    expect(typeof api.ApcoreCliService).toBe('function');
+  });
+
+  // ---- A2A ----
+
+  it('exports ApcoreA2aModule', () => {
+    expect(api.ApcoreA2aModule).toBeDefined();
+    expect(typeof api.ApcoreA2aModule).toBe('function');
+  });
+
+  it('exports ApcoreA2aService', () => {
+    expect(api.ApcoreA2aService).toBeDefined();
+    expect(typeof api.ApcoreA2aService).toBe('function');
+  });
+
   // ---- Decorators ----
 
   it('exports ApTool decorator', () => {
@@ -135,6 +159,14 @@ describe('Public API exports (src/index.ts)', () => {
     expect(api.APCORE_MCP_MODULE_OPTIONS).toBe('APCORE_MCP_MODULE_OPTIONS');
   });
 
+  it('exports APCORE_CLI_MODULE_OPTIONS', () => {
+    expect(api.APCORE_CLI_MODULE_OPTIONS).toBe('APCORE_CLI_MODULE_OPTIONS');
+  });
+
+  it('exports APCORE_A2A_MODULE_OPTIONS', () => {
+    expect(api.APCORE_A2A_MODULE_OPTIONS).toBe('APCORE_A2A_MODULE_OPTIONS');
+  });
+
   it('exports AP_TOOL_METADATA_KEY', () => {
     expect(api.AP_TOOL_METADATA_KEY).toBe('apcore:tool');
   });
@@ -158,6 +190,12 @@ describe('Public API exports (src/index.ts)', () => {
       // MCP
       'ApcoreMcpModule',
       'ApcoreMcpService',
+      // CLI
+      'ApcoreCliModule',
+      'ApcoreCliService',
+      // A2A
+      'ApcoreA2aModule',
+      'ApcoreA2aService',
       // Decorators
       'ApTool',
       'ApModule',
@@ -176,9 +214,31 @@ describe('Public API exports (src/index.ts)', () => {
       'normalizeClassName',
       'normalizeMethodName',
       'generateModuleId',
+      // CLI utilities
+      'createCli',
+      'buildModuleCommand',
+      'LazyModuleGroup',
+      'GroupedModuleGroup',
+      'BUILTIN_COMMANDS',
+      'setDocsUrl',
+      'setVerboseHelp',
+      'buildProgramManPage',
+      'configureManHelp',
+      'EXIT_CODES',
+      'exitCodeForError',
+      // A2A utilities
+      'serveA2A',
+      'asyncServeA2A',
+      'A2AJWTAuthenticator',
+      // Toolkit new exports (0.4.0)
+      'deepResolveRefs',
+      'DisplayResolver',
+      'AIEnhancer',
       // Constants
       'APCORE_MODULE_OPTIONS',
       'APCORE_MCP_MODULE_OPTIONS',
+      'APCORE_CLI_MODULE_OPTIONS',
+      'APCORE_A2A_MODULE_OPTIONS',
       'AP_TOOL_METADATA_KEY',
       'AP_MODULE_METADATA_KEY',
       'AP_CONTEXT_METADATA_KEY',

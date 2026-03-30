@@ -6,6 +6,8 @@ import { ApcoreRegistryService } from './apcore-registry.service.js';
 import { ApcoreExecutorService } from './apcore-executor.service.js';
 import { ApToolScannerService } from '../decorators/ap-tool-scanner.service.js';
 import { ApcoreMcpModule } from '../mcp/apcore-mcp.module.js';
+import { ApcoreCliModule } from '../cli/apcore-cli.module.js';
+import { ApcoreA2aModule } from '../a2a/apcore-a2a.module.js';
 import { APCORE_MODULE_OPTIONS } from '../constants.js';
 import type {
   ApcoreModuleOptions,
@@ -50,6 +52,12 @@ export class ApcoreModule {
     if (options.mcp) {
       imports.push(ApcoreMcpModule.forRoot(options.mcp));
     }
+    if (options.cli) {
+      imports.push(ApcoreCliModule.forRoot(options.cli));
+    }
+    if (options.a2a) {
+      imports.push(ApcoreA2aModule.forRoot(options.a2a));
+    }
 
     return {
       module: ApcoreModule,
@@ -79,6 +87,12 @@ export class ApcoreModule {
     const imports: any[] = [...(options.imports ?? [])];
     if (options.mcp) {
       imports.push(ApcoreMcpModule.forRoot(options.mcp));
+    }
+    if (options.cli) {
+      imports.push(ApcoreCliModule.forRoot(options.cli));
+    }
+    if (options.a2a) {
+      imports.push(ApcoreA2aModule.forRoot(options.a2a));
     }
 
     return {
