@@ -24,7 +24,19 @@ export { ApcoreA2aModule } from './a2a/apcore-a2a.module.js';
 export { ApcoreA2aService } from './a2a/apcore-a2a.service.js';
 
 // Re-export apcore-mcp helpers and types for convenience
-export { reportProgress, elicit, createBridgeContext, asyncServe, APCoreMCP } from 'apcore-mcp';
+export {
+  reportProgress,
+  elicit,
+  createBridgeContext,
+  asyncServe,
+  APCoreMCP,
+  registerMcpNamespace,
+  registerMcpFormatter,
+  McpErrorFormatter,
+  MCP_NAMESPACE,
+  MCP_ENV_PREFIX,
+  MCP_DEFAULTS,
+} from 'apcore-mcp';
 export type {
   BridgeContext,
   OpenAIToolDef,
@@ -134,6 +146,7 @@ export {
   SchemaValidationError,
   EXIT_CODES,
   exitCodeForError,
+  registerConfigNamespace,
 } from 'apcore-cli';
 export type { OptionConfig, ExitCode } from 'apcore-cli';
 
