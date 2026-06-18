@@ -207,7 +207,7 @@ describe('ApcoreExecutorService', () => {
       expect(validateSpy).toHaveBeenCalledWith('mod.action', { key: 'value' }, ctx);
     });
 
-    it('returns validation errors when present', () => {
+    it('returns validation errors when present', async () => {
       const expected = {
         valid: false,
         errors: [{ field: 'key', message: 'required' }],
@@ -216,7 +216,7 @@ describe('ApcoreExecutorService', () => {
       };
       validateSpy.mockReturnValueOnce(expected);
 
-      const result = service.validate('mod.action', {});
+      const result = await service.validate('mod.action', {});
 
       expect(result).toEqual(expected);
       expect(result.valid).toBe(false);
