@@ -36,6 +36,37 @@ export {
   MCP_NAMESPACE,
   MCP_ENV_PREFIX,
   MCP_DEFAULTS,
+  // New value exports
+  toOpenaiTools,
+  MCPServerFactory,
+  MCPServer,
+  ExecutionRouter,
+  RegistryListener,
+  TransportManager,
+  AsyncTaskBridge,
+  createAsyncTaskBridge,
+  META_TOOL_NAMES,
+  APCORE_META_TOOL_PREFIX,
+  ApprovalBridge,
+  APPROVAL_META_TOOL_NAMES,
+  ElicitationApprovalHandler,
+  StorageBackedApprovalHandler,
+  InMemoryApprovalStore,
+  AnnotationMapper,
+  OpenAIConverter,
+  installObservability,
+  parseTraceparent,
+  buildTraceparent,
+  REGISTRY_EVENTS,
+  APCORE_EVENTS,
+  MODULE_ID_PATTERN,
+  ErrorCodes,
+  MCP_PROGRESS_KEY,
+  MCP_ELICIT_KEY,
+  buildExplorerAuthHook,
+  SchemaConverter as McpSchemaConverter,
+  ErrorMapper as McpErrorMapper,
+  ModuleIDNormalizer,
 } from 'apcore-mcp';
 export type {
   BridgeContext,
@@ -49,6 +80,20 @@ export type {
   APCoreMCPServeOptions,
   APCoreMCPAsyncServeOptions,
   ToOpenaiToolsOptions,
+  // New type exports
+  CallResult,
+  HandleCallExtra,
+  ExecutionRouterOptions,
+  ObservabilityFlag,
+  ObservabilityStack,
+  AsyncTaskManagerLike,
+  ApprovalStore,
+  ApprovalRecord,
+  ApprovalMetaToolName,
+  ConvertOptions,
+  ConvertRegistryOptions,
+  BuildToolsOptions,
+  UsageExporter,
 } from 'apcore-mcp';
 
 // Re-export apcore-mcp auth utilities
@@ -76,7 +121,6 @@ export {
   modulesToDicts,
   annotationsToDict,
   resolveTarget,
-  flattenParams,
   toMarkdown,
   AIEnhancer,
   DisplayResolver,
@@ -88,6 +132,26 @@ export {
   MagicBytesVerifier,
   JSONVerifier,
   runVerifierChain,
+  // New value exports
+  SCANNER_VERB_MAP,
+  hasPathParams,
+  resolveHttpVerb,
+  generateSuggestedAlias,
+  extractPathParamNames,
+  substitutePathParams,
+  formatSchema,
+  formatModule,
+  formatModules,
+  formatCsv,
+  formatJsonl,
+  filterModules,
+  deduplicateIds,
+  inferAnnotationsFromMethod,
+  BindingLoader,
+  BindingLoadError,
+  HTTPProxyRegistryWriter,
+  HTTPProxyRegistryWriterError,
+  InvalidFormatError,
 } from 'apcore-toolkit';
 export type {
   ScannedModule,
@@ -99,6 +163,17 @@ export type {
   WriteResult,
   VerifyResult,
   Verifier,
+  // New type exports
+  SchemaStyle,
+  ModuleStyle,
+  GroupBy,
+  FormatSchemaOptions,
+  FormatModuleOptions,
+  FormatModulesOptions,
+  FormatCsvOptions,
+  BindingLoadOptions,
+  HTTPProxyRegistryWriterOptions,
+  ProxyRegistry,
 } from 'apcore-toolkit';
 
 // ---------------------------------------------------------------------------
@@ -109,15 +184,9 @@ export {
   buildModuleCommand,
   LazyModuleGroup,
   GroupedModuleGroup,
-  BUILTIN_COMMANDS,
   setDocsUrl,
   setVerboseHelp,
-  buildProgramManPage,
   configureManHelp,
-  registerShellCommands,
-  registerDiscoveryCommands,
-  getDisplay,
-  getCliDisplayFields,
   ConfigResolver,
   DEFAULTS,
   checkApproval,
@@ -129,8 +198,6 @@ export {
   collectInput,
   reconvertEnumValues,
   schemaToCliOptions,
-  mapType,
-  extractHelp,
   AuditLogger,
   setAuditLogger,
   getAuditLogger,
@@ -147,8 +214,47 @@ export {
   EXIT_CODES,
   exitCodeForError,
   registerConfigNamespace,
+  // New value exports
+  main,
+  applyToolkitIntegration,
+  setAllOptionsHelp,
+  LazyGroup,
+  CliApprovalHandler,
+  ApcliGroup,
+  ApcliGroupError,
+  RESERVED_GROUP_NAMES,
+  APCLI_SUBCOMMAND_NAMES,
+  DEFAULT_BUILTIN_GROUP_NAME,
+  ExposureFilter,
+  registerListCommand,
+  registerDescribeCommand,
+  registerExecCommand,
+  registerValidateCommand,
+  registerCompletionCommand,
+  registerHealthCommand,
+  registerUsageCommand,
+  registerEnableCommand,
+  registerDisableCommand,
+  registerReloadCommand,
+  registerConfigCommand,
+  registerPipelineCommand,
+  registerInitCommand,
+  MaxDepthExceededError,
+  CircularRefError,
+  UnresolvableRefError,
+  setLogLevel,
+  getLogLevel,
+  resolveRefs,
 } from 'apcore-cli';
-export type { OptionConfig, ExitCode } from 'apcore-cli';
+export type {
+  OptionConfig,
+  ExitCode,
+  // New type exports
+  CreateCliOptions,
+  ApplyToolkitIntegrationOptions,
+  ApcliConfig,
+  ApcliMode,
+} from 'apcore-cli';
 
 // ---------------------------------------------------------------------------
 // A2A utilities (from apcore-a2a)
@@ -156,6 +262,24 @@ export type { OptionConfig, ExitCode } from 'apcore-cli';
 export { serve as serveA2A, asyncServe as asyncServeA2A } from 'apcore-a2a';
 export { JWTAuthenticator as A2AJWTAuthenticator } from 'apcore-a2a';
 export type { Authenticator as A2AAuthenticator, ClaimMapping as A2AClaimMapping } from 'apcore-a2a';
+// New A2A value exports
+export {
+  A2AClient,
+  AgentCardBuilder,
+  SkillMapper,
+  PartConverter,
+  A2AServerFactory,
+  ApCoreAgentExecutor,
+  createAuthMiddleware,
+  authIdentityStore,
+  getAuthIdentity,
+  SchemaConverter as A2ASchemaConverter,
+  ErrorMapper as A2AErrorMapper,
+} from 'apcore-a2a';
+// Note: AgentCardFetcher and A2A client error classes (A2AClientError, A2AConnectionError,
+// A2ADiscoveryError, A2AServerError, TaskNotCancelableError, TaskNotFoundError) are only
+// available from the internal apcore-a2a/client sub-module which is not exposed in the
+// package exports map. They are intentionally not re-exported here.
 
 // ---------------------------------------------------------------------------
 // Decorators
@@ -179,6 +303,12 @@ export { JsonSchemaAdapter } from './schema/adapters/json-schema.adapter.js';
 // ---------------------------------------------------------------------------
 export { ApBindingLoader } from './bridge/index.js';
 export type { InstanceProvider } from './bridge/index.js';
+
+// ---------------------------------------------------------------------------
+// Context
+// ---------------------------------------------------------------------------
+export { NestContextFactory } from './context/nest-context.factory.js';
+export type { NestRequest } from './context/nest-context.factory.js';
 
 // ---------------------------------------------------------------------------
 // Utilities

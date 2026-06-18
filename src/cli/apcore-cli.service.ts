@@ -3,7 +3,6 @@ import {
   createCli,
   setDocsUrl,
   setVerboseHelp,
-  buildProgramManPage,
   configureManHelp,
 } from 'apcore-cli';
 import { ApcoreRegistryService } from '../core/apcore-registry.service.js';
@@ -64,27 +63,6 @@ export class ApcoreCliService {
   // -------------------------------------------------------------------------
   // Man page / help
   // -------------------------------------------------------------------------
-
-  /**
-   * Generate a complete roff man page string for the given Commander program.
-   *
-   * Enabled by `apcore-cli` 0.4.0's `buildProgramManPage()`.
-   */
-  buildManPage(
-    program: Parameters<typeof buildProgramManPage>[0],
-    progName: string,
-    version: string,
-    description?: string,
-    docsUrl?: string,
-  ): string {
-    return buildProgramManPage(
-      program,
-      progName,
-      version,
-      description,
-      docsUrl ?? this.options.docsUrl ?? undefined,
-    );
-  }
 
   /**
    * Add `--help --man` support to an existing Commander program.

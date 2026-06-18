@@ -10,11 +10,10 @@ vi.mock('apcore-cli', () => ({
   createCli: vi.fn().mockReturnValue({ name: () => 'test-cli', parse: vi.fn() }),
   setDocsUrl: vi.fn(),
   setVerboseHelp: vi.fn(),
-  buildProgramManPage: vi.fn().mockReturnValue('.TH TEST 1'),
   configureManHelp: vi.fn(),
 }));
 
-import { createCli, setDocsUrl, setVerboseHelp, buildProgramManPage, configureManHelp } from 'apcore-cli';
+import { createCli, setDocsUrl, setVerboseHelp, configureManHelp } from 'apcore-cli';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -110,28 +109,7 @@ describe('ApcoreCliService', () => {
     });
   });
 
-  describe('buildManPage', () => {
-    it('delegates to buildProgramManPage', () => {
-      const fakeProgram = {} as any;
-      const result = service.buildManPage(fakeProgram, 'my-tool', '1.0.0', 'My Tool');
-      expect(buildProgramManPage).toHaveBeenCalledWith(fakeProgram, 'my-tool', '1.0.0', 'My Tool', undefined);
-      expect(result).toBe('.TH TEST 1');
-    });
-
-    it('passes docsUrl from options as default', () => {
-      const svc = new ApcoreCliService(registry, { docsUrl: 'https://docs.example.com' });
-      const fakeProgram = {} as any;
-      svc.buildManPage(fakeProgram, 'my-tool', '1.0.0');
-      expect(buildProgramManPage).toHaveBeenCalledWith(fakeProgram, 'my-tool', '1.0.0', undefined, 'https://docs.example.com');
-    });
-
-    it('explicit docsUrl override takes precedence over options', () => {
-      const svc = new ApcoreCliService(registry, { docsUrl: 'https://default.example.com' });
-      const fakeProgram = {} as any;
-      svc.buildManPage(fakeProgram, 'my-tool', '1.0.0', undefined, 'https://override.example.com');
-      expect(buildProgramManPage).toHaveBeenCalledWith(fakeProgram, 'my-tool', '1.0.0', undefined, 'https://override.example.com');
-    });
-  });
+  // buildManPage was removed in apcore-cli 0.10.x (buildProgramManPage no longer exists)
 
   describe('configureManHelp', () => {
     it('delegates to configureManHelp', () => {

@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { normalizeResult } from 'apcore-js';
 import type { Registry } from 'apcore-js';
+
+/** Normalize a raw execute result to a plain Record<string, unknown>. */
+function normalizeResult(raw: unknown): Record<string, unknown> {
+  if (raw === null || raw === undefined) return {};
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>;
+  return { result: raw };
+}
 import type { ModuleDescriptor } from 'apcore-js';
 import { createScannedModule, moduleToDict, modulesToDicts } from 'apcore-toolkit';
 import type { ScannedModule } from 'apcore-toolkit';

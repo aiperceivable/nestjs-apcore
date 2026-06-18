@@ -1,7 +1,13 @@
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { ModulesContainer } from '@nestjs/core';
-import { normalizeResult } from 'apcore-js';
 import { BaseScanner, createScannedModule, enrichSchemaDescriptions } from 'apcore-toolkit';
+
+/** Normalize a raw execute result to a plain Record<string, unknown>. */
+function normalizeResult(raw: unknown): Record<string, unknown> {
+  if (raw === null || raw === undefined) return {};
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>;
+  return { result: raw };
+}
 import type { ScannedModule } from 'apcore-toolkit';
 import { ApcoreRegistryService } from '../core/apcore-registry.service.js';
 import { SchemaExtractor } from '../schema/schema-extractor.service.js';
@@ -154,7 +160,11 @@ export class ApToolScannerService extends BaseScanner implements OnModuleInit {
 
     // Apply include/exclude filtering via inherited BaseScanner.filterModules()
     if (this._scanOptions.include || this._scanOptions.exclude) {
-      scannedModules = this.filterModules(scannedModules, this._scanOptions);
+      scannedModules = this.filterModules(
+        scannedModules,
+        this._scanOptions.include,
+        this._scanOptions.exclude,
+      );
     }
 
     for (const mod of scannedModules) {

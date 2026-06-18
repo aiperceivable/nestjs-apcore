@@ -119,12 +119,30 @@ export interface ApcoreMcpModuleOptions {
   logLevel?: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
   onStartup?: () => void | Promise<void>;
   onShutdown?: () => void | Promise<void>;
-  metricsCollector?: import('apcore-mcp').MetricsExporter;
+  metricsCollector?: import('apcore-mcp').MetricsExporter | boolean;
   authenticator?: import('apcore-mcp').Authenticator;
   requireAuth?: boolean;
   exemptPaths?: string[];
   approvalHandler?: unknown;
   outputFormatter?: (result: Record<string, unknown>) => string;
+  /** Enable full observability stack (metrics + usage middleware). */
+  observability?: import('apcore-mcp').ObservabilityFlag;
+  /** Built-in output format ("json", "csv", "jsonl"). */
+  outputFormat?: 'json' | 'csv' | 'jsonl';
+  /** Redact sensitive fields from tool output. Default: true. */
+  redactOutput?: boolean;
+  /** Enable pipeline trace in tool responses. Default: false. */
+  trace?: boolean;
+  /** Execution strategy name. */
+  strategy?: string;
+  /** Additional middleware instances to install on the executor. */
+  mcpMiddleware?: unknown[];
+  /** Optional ACL instance for this MCP server. */
+  mcpAcl?: unknown;
+  /** Pluggable ApprovalStore for async approval polling. */
+  approvalStore?: unknown;
+  /** Callback invoked when a new approval is requested. */
+  approvalNotify?: (approvalId: string, moduleId: string, args: Record<string, unknown>) => Promise<void>;
 }
 
 /** Async options for ApcoreMcpModule.forRootAsync(). */

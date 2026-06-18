@@ -69,7 +69,7 @@ export class ApcoreExecutorService {
     moduleId: string,
     inputs?: Record<string, unknown>,
     context?: Context | null,
-  ): PreflightResult {
+  ): Promise<PreflightResult> {
     return this.executor.validate(moduleId, inputs ?? {}, context);
   }
 }

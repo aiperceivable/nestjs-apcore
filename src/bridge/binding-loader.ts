@@ -1,8 +1,14 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import * as yaml from 'js-yaml';
 import { readFile } from 'node:fs/promises';
-import { normalizeResult } from 'apcore-js';
 import { createScannedModule } from 'apcore-toolkit';
+
+/** Normalize a raw execute result to a plain Record<string, unknown>. */
+function normalizeResult(raw: unknown): Record<string, unknown> {
+  if (raw === null || raw === undefined) return {};
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>;
+  return { result: raw };
+}
 import { ApcoreRegistryService } from '../core/apcore-registry.service.js';
 import {
   scannedModuleToFunctionModule,

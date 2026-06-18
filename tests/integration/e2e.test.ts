@@ -201,14 +201,14 @@ describe('E2E Integration Tests (real apcore-js)', () => {
       expect(result).toEqual({ sum: 10 });
     });
 
-    it('should validate valid inputs against schema', () => {
-      const valid = executor.validate('math.add', { a: 1, b: 2 });
+    it('should validate valid inputs against schema', async () => {
+      const valid = await executor.validate('math.add', { a: 1, b: 2 });
       expect(valid.valid).toBe(true);
       expect(valid.errors).toEqual([]);
     });
 
-    it('should reject invalid inputs against schema', () => {
-      const invalid = executor.validate('math.add', { a: 'not a number', b: 2 } as any);
+    it('should reject invalid inputs against schema', async () => {
+      const invalid = await executor.validate('math.add', { a: 'not a number', b: 2 } as any);
       expect(invalid.valid).toBe(false);
       expect(invalid.errors.length).toBeGreaterThan(0);
     });

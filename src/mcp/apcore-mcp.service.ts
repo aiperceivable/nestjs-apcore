@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { serve, asyncServe, toOpenaiTools } from 'apcore-mcp';
-import type { OpenAIToolDef, AsyncServeApp } from 'apcore-mcp';
+import type { OpenAIToolDef, AsyncServeApp, RegistryOrExecutor } from 'apcore-mcp';
 import { ApcoreRegistryService } from '../core/apcore-registry.service.js';
 import { ApcoreExecutorService } from '../core/apcore-executor.service.js';
 import { APCORE_MCP_MODULE_OPTIONS } from '../constants.js';
@@ -74,7 +74,7 @@ export class ApcoreMcpService implements OnApplicationBootstrap, OnModuleDestroy
       ...this.collectOptions(SERVE_ONLY_KEYS),
     };
 
-    await serve(this.executor.raw, serveOptions);
+    await serve(this.executor.raw as unknown as RegistryOrExecutor, serveOptions);
   }
 
   /**
@@ -99,7 +99,7 @@ export class ApcoreMcpService implements OnApplicationBootstrap, OnModuleDestroy
     if (options?.explorerPrefix !== undefined) asyncOptions.explorerPrefix = options.explorerPrefix;
     if (options?.allowExecute !== undefined) asyncOptions.allowExecute = options.allowExecute;
 
-    return asyncServe(this.executor.raw, asyncOptions);
+    return asyncServe(this.executor.raw as unknown as RegistryOrExecutor, asyncOptions);
   }
 
   /** Stops the MCP server. */
@@ -128,7 +128,7 @@ export class ApcoreMcpService implements OnApplicationBootstrap, OnModuleDestroy
     tags?: string[];
     prefix?: string;
   }): OpenAIToolDef[] {
-    return toOpenaiTools(this.executor.raw, options);
+    return toOpenaiTools(this.executor.raw as unknown as RegistryOrExecutor, options);
   }
 
   // -----------------------------------------------------------------------
