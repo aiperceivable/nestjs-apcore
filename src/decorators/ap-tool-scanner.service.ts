@@ -103,8 +103,8 @@ export class ApToolScannerService extends BaseScanner implements OnModuleInit {
     return 'nestjs-decorators';
   }
 
-  onModuleInit(): void {
-    this.scanAndRegister();
+  async onModuleInit(): Promise<void> {
+    await this.scanAndRegister();
   }
 
   /**
@@ -155,7 +155,7 @@ export class ApToolScannerService extends BaseScanner implements OnModuleInit {
   /**
    * Scan, deduplicate, filter, then register all discovered modules.
    */
-  private scanAndRegister(): void {
+  private async scanAndRegister(): Promise<void> {
     let scannedModules = this.scan();
 
     // Apply include/exclude filtering via inherited BaseScanner.filterModules()
@@ -177,7 +177,7 @@ export class ApToolScannerService extends BaseScanner implements OnModuleInit {
       }
 
       const fm = scannedModuleToFunctionModule(mod, execute);
-      this.registry.register(mod.moduleId, fm);
+      await this.registry.register(mod.moduleId, fm);
     }
   }
 

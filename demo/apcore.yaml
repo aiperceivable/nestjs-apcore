@@ -1,0 +1,16 @@
+# apcore configuration — auto-discovered by apcore-js from the working directory.
+# See https://github.com/aiperceivable/apcore-typescript for all options.
+
+acl:
+  root: ./acl.yaml       # Points to the ACL rules file; ACL.discover() loads it automatically.
+                         # Set to a directory to use the <dir>/global_acl.yaml convention.
+                         # Remove this key (or delete acl.yaml) to disable ACL enforcement.
+
+sys_modules:
+  enabled: true          # Registers system tools: health, usage, toggle_feature, reload, manifest
+  events:
+    enabled: true        # Enables module.toggled events for audit trail
+
+apcore-mcp:
+  log_level: INFO
+  validate_inputs: true  # Enforce input schemas on every MCP call

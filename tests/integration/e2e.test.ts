@@ -239,7 +239,7 @@ describe('E2E Integration Tests (real apcore-js)', () => {
 
       const mathHelper = new MathHelper();
 
-      registeredIds = registry.registerService({
+      registeredIds = await registry.registerService({
         instance: mathHelper,
         description: 'Math operations',
         methods: ['add', 'multiply', 'subtract'],

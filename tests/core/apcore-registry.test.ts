@@ -6,7 +6,7 @@ import type { Registry } from 'apcore-js';
 
 function createMockRegistry(): Registry {
   return {
-    register: vi.fn(),
+    register: vi.fn().mockResolvedValue(undefined),
     unregister: vi.fn().mockReturnValue(true),
     get: vi.fn().mockReturnValue({ execute: vi.fn() }),
     has: vi.fn().mockReturnValue(true),
@@ -44,9 +44,9 @@ describe('ApcoreRegistryService', () => {
   // ---- delegated methods ----
 
   describe('register()', () => {
-    it('delegates to upstream registry.register()', () => {
+    it('delegates to upstream registry.register()', async () => {
       const mod = { execute: vi.fn() };
-      service.register('my.mod', mod);
+      await service.register('my.mod', mod);
       expect(mockRegistry.register).toHaveBeenCalledWith('my.mod', mod);
     });
   });
@@ -129,9 +129,9 @@ describe('ApcoreRegistryService', () => {
       }
     }
 
-    it('registers a FunctionModule with auto-generated ID', () => {
+    it('registers a FunctionModule with auto-generated ID', async () => {
       const instance = new EmailService();
-      const id = service.registerMethod({
+      const id = await service.registerMethod({
         instance,
         method: 'sendEmail',
         description: 'Sends an email',
@@ -148,9 +148,9 @@ describe('ApcoreRegistryService', () => {
       );
     });
 
-    it('uses explicit id when provided', () => {
+    it('uses explicit id when provided', async () => {
       const instance = new EmailService();
-      const id = service.registerMethod({
+      const id = await service.registerMethod({
         instance,
         method: 'sendEmail',
         description: 'Sends an email',
@@ -164,9 +164,9 @@ describe('ApcoreRegistryService', () => {
       );
     });
 
-    it('passes optional fields (tags, annotations, documentation, examples) to FunctionModule', () => {
+    it('passes optional fields (tags, annotations, documentation, examples) to FunctionModule', async () => {
       const instance = new EmailService();
-      service.registerMethod({
+      await service.registerMethod({
         instance,
         method: 'sendEmail',
         description: 'Sends an email',
@@ -196,7 +196,7 @@ describe('ApcoreRegistryService', () => {
       );
 
       const instance = new EmailService();
-      service.registerMethod({
+      await service.registerMethod({
         instance,
         method: 'sendEmail',
         description: 'Sends an email',
@@ -222,7 +222,7 @@ describe('ApcoreRegistryService', () => {
       );
 
       const instance = new NullService();
-      service.registerMethod({
+      await service.registerMethod({
         instance,
         method: 'doNothing',
         description: 'Returns null',
@@ -247,7 +247,7 @@ describe('ApcoreRegistryService', () => {
       );
 
       const instance = new VoidService();
-      service.registerMethod({
+      await service.registerMethod({
         instance,
         method: 'doVoid',
         description: 'Returns undefined',
@@ -272,7 +272,7 @@ describe('ApcoreRegistryService', () => {
       );
 
       const instance = new StringService();
-      service.registerMethod({
+      await service.registerMethod({
         instance,
         method: 'greet',
         description: 'Returns a string',
@@ -297,7 +297,7 @@ describe('ApcoreRegistryService', () => {
       );
 
       const instance = new NumService();
-      service.registerMethod({
+      await service.registerMethod({
         instance,
         method: 'compute',
         description: 'Returns a number',
@@ -322,7 +322,7 @@ describe('ApcoreRegistryService', () => {
       );
 
       const instance = new ObjService();
-      service.registerMethod({
+      await service.registerMethod({
         instance,
         method: 'getData',
         description: 'Returns an object',
@@ -347,7 +347,7 @@ describe('ApcoreRegistryService', () => {
       );
 
       const instance = new AsyncService();
-      service.registerMethod({
+      await service.registerMethod({
         instance,
         method: 'fetchData',
         description: 'Async method',
@@ -357,17 +357,15 @@ describe('ApcoreRegistryService', () => {
       expect(result).toEqual({ data: 'async-result' });
     });
 
-    it('throws when method does not exist on instance', () => {
+    it('throws when method does not exist on instance', async () => {
       class EmptyService {}
       const instance = new EmptyService();
 
-      expect(() =>
-        service.registerMethod({
-          instance,
-          method: 'nonExistent',
-          description: 'Does not exist',
-        }),
-      ).toThrow();
+      await expect(service.registerMethod({
+        instance,
+        method: 'nonExistent',
+        description: 'Does not exist',
+      })).rejects.toThrow();
     });
   });
 
@@ -390,9 +388,9 @@ describe('ApcoreRegistryService', () => {
       }
     }
 
-    it('registers specific methods by name', () => {
+    it('registers specific methods by name', async () => {
       const instance = new OrderService();
-      const ids = service.registerService({
+      const ids = await service.registerService({
         instance,
         methods: ['createOrder', 'cancelOrder'],
         description: 'Order operations',
@@ -404,9 +402,9 @@ describe('ApcoreRegistryService', () => {
       expect(mockRegistry.register).toHaveBeenCalledTimes(2);
     });
 
-    it('registers all public methods with wildcard "*"', () => {
+    it('registers all public methods with wildcard "*"', async () => {
       const instance = new OrderService();
-      const ids = service.registerService({
+      const ids = await service.registerService({
         instance,
         methods: '*',
         description: 'All order operations',
@@ -419,9 +417,9 @@ describe('ApcoreRegistryService', () => {
       expect(mockRegistry.register).toHaveBeenCalledTimes(3);
     });
 
-    it('excludes constructor when using wildcard', () => {
+    it('excludes constructor when using wildcard', async () => {
       const instance = new OrderService();
-      const ids = service.registerService({
+      const ids = await service.registerService({
         instance,
         methods: '*',
       });
@@ -430,9 +428,9 @@ describe('ApcoreRegistryService', () => {
       expect(hasConstructor).toBe(false);
     });
 
-    it('respects exclude array', () => {
+    it('respects exclude array', async () => {
       const instance = new OrderService();
-      const ids = service.registerService({
+      const ids = await service.registerService({
         instance,
         methods: '*',
         exclude: ['getStatus'],
@@ -442,9 +440,9 @@ describe('ApcoreRegistryService', () => {
       expect(ids).not.toContain('order.get_status');
     });
 
-    it('uses namespace when provided', () => {
+    it('uses namespace when provided', async () => {
       const instance = new OrderService();
-      const ids = service.registerService({
+      const ids = await service.registerService({
         instance,
         methods: ['createOrder'],
         namespace: 'orders',
@@ -453,9 +451,9 @@ describe('ApcoreRegistryService', () => {
       expect(ids).toEqual(['orders.create_order']);
     });
 
-    it('applies per-method options from methodOptions', () => {
+    it('applies per-method options from methodOptions', async () => {
       const instance = new OrderService();
-      const ids = service.registerService({
+      const ids = await service.registerService({
         instance,
         methods: ['createOrder'],
         methodOptions: {
@@ -475,9 +473,9 @@ describe('ApcoreRegistryService', () => {
       );
     });
 
-    it('uses service-level description as default for methods', () => {
+    it('uses service-level description as default for methods', async () => {
       const instance = new OrderService();
-      service.registerService({
+      await service.registerService({
         instance,
         methods: ['createOrder'],
         description: 'Service-level description',
@@ -491,9 +489,9 @@ describe('ApcoreRegistryService', () => {
       );
     });
 
-    it('method-level description overrides service-level description', () => {
+    it('method-level description overrides service-level description', async () => {
       const instance = new OrderService();
-      service.registerService({
+      await service.registerService({
         instance,
         methods: ['createOrder'],
         description: 'Service-level description',
@@ -512,9 +510,9 @@ describe('ApcoreRegistryService', () => {
       );
     });
 
-    it('passes service-level tags and annotations to methods', () => {
+    it('passes service-level tags and annotations to methods', async () => {
       const instance = new OrderService();
-      service.registerService({
+      await service.registerService({
         instance,
         methods: ['createOrder'],
         tags: ['commerce'],
@@ -529,10 +527,10 @@ describe('ApcoreRegistryService', () => {
       );
     });
 
-    it('handles class with no methods gracefully (wildcard)', () => {
+    it('handles class with no methods gracefully (wildcard)', async () => {
       class EmptyService {}
       const instance = new EmptyService();
-      const ids = service.registerService({
+      const ids = await service.registerService({
         instance,
         methods: '*',
       });
@@ -541,7 +539,7 @@ describe('ApcoreRegistryService', () => {
       expect(mockRegistry.register).not.toHaveBeenCalled();
     });
 
-    it('discovers inherited methods from prototype chain', () => {
+    it('discovers inherited methods from prototype chain', async () => {
       class BaseService {
         baseMethod() {
           return { base: true };
@@ -554,7 +552,7 @@ describe('ApcoreRegistryService', () => {
       }
 
       const instance = new ChildService();
-      const ids = service.registerService({
+      const ids = await service.registerService({
         instance,
         methods: '*',
       });

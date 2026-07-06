@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-07-06
+
+### Added
+
+- **`ACL.discover(config)` support in demo** — `demo/apcore.yaml` now declares `acl.root: ./acl.yaml`; `app.module.ts` calls `ACL.discover(config)` (new in apcore-js 0.25.0) instead of manually parsing the YAML. Both config and ACL are loaded in a single `Config.discover()` call at module startup.
+
+### Changed
+
+- **Dependency upgrades** — `apcore-js` ≥ 0.25.0, `apcore-toolkit` ^ 0.9.1, `apcore-mcp` ≥ 0.17.0, `apcore-cli` ≥ 0.10.2.
+- **`register()`, `registerMethod()`, `registerService()`, `loadFromString()` are now `async`** — `Registry.register()` has returned `Promise<void>` since apcore-js 0.22.0. nestjs-apcore's wrappers now correctly `await` it, matching the fix in apcore-toolkit 0.9.1's `RegistryWriter`. `ApToolScannerService.onModuleInit()` is also now `async` so NestJS awaits tool registration before the app is marked ready. This is a **breaking change** for callers who relied on a synchronous return value from these methods.
+
+### Migration Notes
+
+**Async registration methods** — if you call any of these programmatically, add `await`:
+
+```typescript
+// Before (0.5.x)
+const id = registry.registerMethod({ ... });
+const ids = registry.registerService({ ... });
+const ids = bindingLoader.loadFromString(yaml);
+
+// After (0.6.0)
+const id = await registry.registerMethod({ ... });
+const ids = await registry.registerService({ ... });
+const ids = await bindingLoader.loadFromString(yaml);
+```
+
+### Added
+
+- **New MCP exports** — `MCPServerFactory` (`MCPServer` alias), `ExecutionRouter`, `RegistryListener`, `TransportManager`, `AsyncTaskBridge`, `createAsyncTaskBridge`, `META_TOOL_NAMES`, `APCORE_META_TOOL_PREFIX`, `ApprovalBridge`, `APPROVAL_META_TOOL_NAMES`, `ElicitationApprovalHandler`, `StorageBackedApprovalHandler`, `InMemoryApprovalStore`, `AnnotationMapper`, `McpSchemaConverter`, `McpErrorMapper`, `ModuleIDNormalizer`, `OpenAIConverter`, `toOpenaiTools`, `installObservability`, `parseTraceparent`, `buildTraceparent`, `REGISTRY_EVENTS`, `APCORE_EVENTS`, `MODULE_ID_PATTERN`, `ErrorCodes`, `MCP_PROGRESS_KEY`, `MCP_ELICIT_KEY`, `buildExplorerAuthHook` re-exported from `apcore-mcp`.
+- **New MCP types** — `CallResult`, `HandleCallExtra`, `ExecutionRouterOptions`, `ObservabilityFlag`, `ObservabilityStack`, `AsyncTaskManagerLike`, `ApprovalStore`, `ApprovalRecord`, `ApprovalMetaToolName`, `ConvertOptions`, `ConvertRegistryOptions`, `BuildToolsOptions`, `UsageExporter`.
+- **New A2A exports** — `A2AClient`, `AgentCardBuilder`, `SkillMapper`, `PartConverter`, `A2ASchemaConverter`, `A2AErrorMapper`, `A2AServerFactory`, `ApCoreAgentExecutor`, `createAuthMiddleware`, `authIdentityStore`, `getAuthIdentity` re-exported from `apcore-a2a`.
+- **New CLI exports** — `main`, `applyToolkitIntegration`, `setAllOptionsHelp`, `LazyGroup`, `CliApprovalHandler`, `ApcliGroup`, `ApcliGroupError`, `RESERVED_GROUP_NAMES`, `APCLI_SUBCOMMAND_NAMES`, `DEFAULT_BUILTIN_GROUP_NAME`, `ExposureFilter`, `registerListCommand`, `registerDescribeCommand`, `registerExecCommand`, `registerValidateCommand`, `registerCompletionCommand`, `registerHealthCommand`, `registerUsageCommand`, `registerEnableCommand`, `registerDisableCommand`, `registerReloadCommand`, `registerConfigCommand`, `registerPipelineCommand`, `registerInitCommand`, `MaxDepthExceededError`, `CircularRefError`, `UnresolvableRefError`, `setLogLevel`, `getLogLevel`, `resolveRefs` re-exported from `apcore-cli`.
+- **New CLI types** — `CreateCliOptions`, `ApplyToolkitIntegrationOptions`, `ApcliConfig`, `ApcliMode`.
+- **New Toolkit exports** — `SCANNER_VERB_MAP`, `hasPathParams`, `resolveHttpVerb`, `generateSuggestedAlias`, `extractPathParamNames`, `substitutePathParams`, `formatSchema`, `formatModule`, `formatModules`, `formatCsv`, `formatJsonl`, `filterModules`, `deduplicateIds`, `inferAnnotationsFromMethod`, `BindingLoader`, `BindingLoadError`, `HTTPProxyRegistryWriter`, `HTTPProxyRegistryWriterError`, `InvalidFormatError` re-exported from `apcore-toolkit`.
+- **New Toolkit types** — `SchemaStyle`, `ModuleStyle`, `GroupBy`, `FormatSchemaOptions`, `FormatModuleOptions`, `FormatModulesOptions`, `FormatCsvOptions`, `BindingLoadOptions`, `HTTPProxyRegistryWriterOptions`, `ProxyRegistry`.
+- **`ApcoreMcpModuleOptions` extended** — New fields: `observability` (`ObservabilityFlag`), `outputFormat` (`'json' | 'csv' | 'jsonl'`), `redactOutput`, `trace`, `strategy`, `mcpMiddleware`, `mcpAcl`, `approvalStore`, `approvalNotify`. `metricsCollector` now also accepts `true` to auto-instantiate the built-in metrics collector.
+
+### Changed
+
+- **Dependency upgrades** — `apcore-js` ≥ 0.24.0, `apcore-toolkit` ^ 0.8.1, `apcore-mcp` ≥ 0.16.0, `apcore-cli` ≥ 0.10.0, `apcore-a2a` ≥ 0.4.0. Dev dependencies updated to NestJS 11.
+- **`ApcoreExecutorService.validate()` is now `async`** — Returns `Promise<PreflightResult>` to match the upstream `apcore-js` 0.24.0 API. Callers must `await` the result.
+- **`normalizeResult` inlined** — `normalizeResult()` was removed from `apcore-js` 0.24.0; an equivalent local helper is now used in `ApcoreRegistryService` and `ApBindingLoader`.
+
+### Removed
+
+The following symbols were removed from upstream `apcore-cli` 0.10.x and are no longer re-exported:
+
+- `BUILTIN_COMMANDS`
+- `buildProgramManPage`
+- `registerShellCommands` (replaced by `registerCompletionCommand`)
+- `registerDiscoveryCommands` (replaced by individual `registerListCommand` / `registerDescribeCommand` / `registerExecCommand` / `registerValidateCommand`)
+- `getDisplay`, `getCliDisplayFields` (moved to internal use in apcore-cli)
+- `mapType`, `extractHelp` (moved to internal use in apcore-cli)
+- `flattenParams` (removed from `apcore-toolkit`)
+
+### Migration Notes
+
+**`validate()` is now async:**
+
+```typescript
+// Before (0.4.x)
+const result = service.validate('mod.action', {});
+
+// After (0.5.0)
+const result = await service.validate('mod.action', {});
+```
+
+**Removed CLI exports** — replace `registerDiscoveryCommands(program, executor)` with the four individual registrars:
+
+```typescript
+// Before
+registerDiscoveryCommands(program, executor);
+
+// After
+registerListCommand(program, executor);
+registerDescribeCommand(program, executor);
+registerExecCommand(program, executor);
+registerValidateCommand(program, executor);
+```
+
 ## [0.4.0] - 2026-03-30
 
 ### Added

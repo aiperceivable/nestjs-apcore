@@ -33,7 +33,7 @@ npm install class-validator class-transformer  # DtoAdapter
 npm install @sinclair/typebox                  # TypeBoxAdapter (recommended)
 ```
 
-**Requirements:** Node.js >= 18, NestJS >= 10
+**Requirements:** Node.js >= 18, NestJS >= 10 (tested with NestJS 11)
 
 ## Quick Start
 
@@ -167,10 +167,22 @@ ApcoreModule.forRootAsync({
 | `explorer` | `boolean` | Enable Tool Explorer web UI |
 | `allowExecute` | `boolean` | Allow tool execution from Explorer |
 | `authenticator` | `Authenticator` | JWT or custom auth strategy |
+| `requireAuth` | `boolean` | Reject unauthenticated requests (default: `true`) |
+| `exemptPaths` | `string[]` | Paths exempt from auth (default: `["/health", "/metrics"]`) |
 | `tags` | `string[]` | Only expose tools with these tags |
 | `prefix` | `string` | Only expose tools with this ID prefix |
 | `logLevel` | `string` | `'DEBUG' \| 'INFO' \| 'WARNING' \| 'ERROR' \| 'CRITICAL'` |
-| `metricsCollector` | `MetricsExporter` | Enables `/metrics` Prometheus endpoint |
+| `metricsCollector` | `MetricsExporter \| true` | Enables `/metrics` endpoint; `true` auto-instantiates |
+| `observability` | `ObservabilityFlag` | Full stack: metrics + usage middleware + `/usage` endpoint |
+| `outputFormat` | `'json' \| 'csv' \| 'jsonl'` | Built-in result serialisation format |
+| `redactOutput` | `boolean` | Redact sensitive fields from tool output (default: `true`) |
+| `trace` | `boolean` | Attach pipeline trace to tool responses (default: `false`) |
+| `strategy` | `string` | Execution strategy name (e.g. `"standard"`, `"minimal"`) |
+| `approvalHandler` | `unknown` | Custom approval handler for the executor |
+| `approvalStore` | `unknown` | Pluggable approval store; auto-wires `StorageBackedApprovalHandler` |
+| `approvalNotify` | `function` | Callback on new approval request (Slack/email fan-out) |
+| `mcpMiddleware` | `unknown[]` | Extra apcore middleware to install on the executor |
+| `mcpAcl` | `unknown` | apcore ACL instance for this MCP server |
 | `onStartup` | `() => void` | Callback after server starts |
 | `onShutdown` | `() => void` | Callback before server stops |
 
@@ -222,10 +234,14 @@ export class AppModule {}
 
 | Service | Description |
 |---|---|
-| `ApcoreRegistryService` | Register/unregister tools, query the registry |
-| `ApcoreExecutorService` | Execute tools: `call()`, `stream()`, `validate()` |
+| `ApcoreRegistryService` | Register/unregister tools, query the registry — `register()`, `registerMethod()`, `registerService()` are async since 0.6.0 |
+| `ApcoreExecutorService` | Execute tools: `call()`, `stream()`, `validate()` (async since 0.5.0) |
 | `ApcoreMcpService` | MCP server lifecycle: `start()`, `stop()`, `restart()`, `toOpenaiTools()` |
+| `ApcoreCliService` | CLI lifecycle: `run()` — integrates `apcore-cli` with NestJS |
+| `ApcoreA2aService` | A2A server lifecycle: `start()`, `stop()`, `asyncServe()` |
 | `ApToolScannerService` | Auto-discovers and registers `@ApTool` decorated methods at startup |
+
+> **Breaking change in 0.5.0:** `ApcoreExecutorService.validate()` now returns `Promise<PreflightResult>` — add `await` at call sites.
 
 ### Schema Adapters
 
@@ -283,11 +299,86 @@ list(inputs: Record<string, unknown>) {
 }
 ```
 
+### A2A Module
+
+Expose your tools as an [Agent-to-Agent](https://a2aprotocol.ai/) server:
+
+```typescript
+ApcoreModule.forRoot({
+  a2a: {
+    name: 'my-agent',
+    port: 9000,
+    url: 'https://my-agent.example.com',
+    explorer: true,
+  },
+})
+```
+
+Embed into the NestJS HTTP server instead of running standalone:
+
+```typescript
+const a2aApp = await a2aService.asyncServe();
+nestApp.use('/a2a', a2aApp);
+```
+
+The `A2AClient` is also re-exported for calling remote A2A servers:
+
+```typescript
+import { A2AClient } from 'nestjs-apcore';
+const client = new A2AClient({ baseUrl: 'https://other-agent.example.com' });
+const result = await client.runTask({ skill: 'weather.forecast', input: { city: 'Tokyo' } });
+```
+
+### CLI Module
+
+Integrate `apcore-cli` with NestJS for a standalone command-line interface:
+
+```typescript
+ApcoreModule.forRoot({
+  cli: {
+    progName: 'my-cli',
+    docsUrl: 'https://docs.example.com',
+  },
+})
+```
+
 ### Re-exported Utilities
 
-From `apcore-mcp`:
-- `reportProgress`, `elicit`, `createBridgeContext`
-- `JWTAuthenticator`, `getCurrentIdentity`, `identityStorage`
+All utilities are importable directly from `nestjs-apcore`.
+
+**`apcore-mcp`:**
+- `reportProgress`, `elicit`, `createBridgeContext`, `toOpenaiTools`
+- `JWTAuthenticator`, `getCurrentIdentity`, `identityStorage`, `buildExplorerAuthHook`
+- `MCPServerFactory` (`MCPServer`), `ExecutionRouter`, `AsyncTaskBridge`, `ApprovalBridge`
+- `ElicitationApprovalHandler`, `StorageBackedApprovalHandler`, `InMemoryApprovalStore`
+- `OpenAIConverter`, `AnnotationMapper`, `McpSchemaConverter`, `McpErrorMapper`, `ModuleIDNormalizer`
+- `installObservability`, `parseTraceparent`, `buildTraceparent`
+- Constants: `MCP_NAMESPACE`, `MCP_ENV_PREFIX`, `MCP_DEFAULTS`, `MCP_PROGRESS_KEY`, `MCP_ELICIT_KEY`, `REGISTRY_EVENTS`, `APCORE_EVENTS`, `MODULE_ID_PATTERN`, `ErrorCodes`
+
+**`apcore-a2a`:**
+- `serveA2A`, `asyncServeA2A`, `A2AClient`, `AgentCardBuilder`, `SkillMapper`, `PartConverter`
+- `A2AServerFactory`, `ApCoreAgentExecutor`
+- `A2AJWTAuthenticator`, `createAuthMiddleware`, `authIdentityStore`, `getAuthIdentity`
+- `A2ASchemaConverter`, `A2AErrorMapper`
+
+**`apcore-cli`:**
+- `createCli`, `main`, `buildModuleCommand`, `applyToolkitIntegration`
+- `LazyModuleGroup`, `GroupedModuleGroup`, `LazyGroup`, `ApcliGroup`, `ExposureFilter`
+- `ConfigResolver`, `DEFAULTS`, `registerConfigNamespace`
+- Discovery: `registerListCommand`, `registerDescribeCommand`, `registerExecCommand`, `registerValidateCommand`
+- System: `registerHealthCommand`, `registerUsageCommand`, `registerEnableCommand`, `registerDisableCommand`, `registerReloadCommand`, `registerConfigCommand`, `registerPipelineCommand`, `registerInitCommand`, `registerCompletionCommand`, `configureManHelp`
+- `setLogLevel`, `getLogLevel`, `resolveRefs`, `schemaToCliOptions`
+- Security: `AuditLogger`, `setAuditLogger`, `getAuditLogger`, `AuthProvider`, `ConfigEncryptor`, `Sandbox`
+
+**`apcore-toolkit`:**
+- `BaseScanner`, `filterModules`, `deduplicateIds`, `inferAnnotationsFromMethod`
+- `createScannedModule`, `cloneModule`, `moduleToDict`, `modulesToDicts`, `annotationsToDict`
+- Schema: `extractInputSchema`, `extractOutputSchema`, `resolveRef`, `resolveSchema`, `deepResolveRefs`, `enrichSchemaDescriptions`
+- Formatting: `toMarkdown`, `formatSchema`, `formatModule`, `formatModules`, `formatCsv`, `formatJsonl`
+- Writers: `YAMLWriter`, `TypeScriptWriter`, `RegistryWriter`, `HTTPProxyRegistryWriter`, `getWriter`
+- Verifiers: `YAMLVerifier`, `SyntaxVerifier`, `RegistryVerifier`, `MagicBytesVerifier`, `JSONVerifier`, `runVerifierChain`
+- HTTP utils: `SCANNER_VERB_MAP`, `resolveHttpVerb`, `hasPathParams`, `generateSuggestedAlias`, `extractPathParamNames`, `substitutePathParams`
+- `BindingLoader`, `AIEnhancer`, `DisplayResolver`, `resolveTarget`
 
 ## Examples
 

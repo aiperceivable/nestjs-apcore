@@ -12,11 +12,11 @@ importers:
         specifier: ^1.26.0
         version: 1.27.1(zod@3.25.76)
       apcore-js:
-        specifier: '>=0.24.0'
-        version: 0.24.0
+        specifier: '>=0.25.0'
+        version: 0.25.0
       apcore-toolkit:
-        specifier: ^0.8.1
-        version: 0.8.1(@sinclair/typebox@0.34.48)
+        specifier: ^0.9.1
+        version: 0.9.1(@sinclair/typebox@0.34.48)
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -49,11 +49,11 @@ importers:
         specifier: ^0.4.1
         version: 0.4.1(@sinclair/typebox@0.34.48)
       apcore-cli:
-        specifier: ^0.10.1
-        version: 0.10.1(apcore-js@0.24.0)(apcore-toolkit@0.8.1(@sinclair/typebox@0.34.48))
+        specifier: ^0.10.2
+        version: 0.10.2(apcore-js@0.25.0)(apcore-toolkit@0.9.1(@sinclair/typebox@0.34.48))
       apcore-mcp:
-        specifier: ^0.16.0
-        version: 0.16.0(@sinclair/typebox@0.34.48)(zod@3.25.76)
+        specifier: ^0.17.0
+        version: 0.17.0(@sinclair/typebox@0.34.48)(zod@3.25.76)
       apdev-js:
         specifier: ^0.2.0
         version: 0.2.0(typescript@5.9.3)
@@ -615,25 +615,25 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  apcore-cli@0.10.1:
-    resolution: {integrity: sha512-+yPa+43ZHrzaQFAakwRV6LcXGFYaK3pqqbe43/Ez8TZj5JjokRqqmeiNHn5wAyaADO7/13o6Nll8t+JOs/tbUw==}
+  apcore-cli@0.10.2:
+    resolution: {integrity: sha512-Mu9Bs6lBkyqbMgKPOb+KIgGfEwlBjcAmJxtWlz6ftPkZ/qBkRQcyII5Mc3PW6ZY3+J9h0eOEDtDWtwyqp8VRWg==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
-      apcore-js: '>=0.24.0'
-      apcore-toolkit: '>=0.8.1'
+      apcore-js: '>=0.25.0'
+      apcore-toolkit: '>=0.9.1'
 
-  apcore-js@0.24.0:
-    resolution: {integrity: sha512-cNBUcnxPmd4reZ6JguarMZcTLohDC19ddJd8GKH9p3hlubPynDLoGULxCACFuFXni1w+1jtYIeaSzBlmZwnfMg==}
+  apcore-js@0.25.0:
+    resolution: {integrity: sha512-zz8QDsp69e/V0/4lJgkUth2Ikze2xg3BvBmHqYvcu9+ms7f3sunhjgZuOzLo5MK+c3g1Oi4HlCYt+eAJnJBWpg==}
     engines: {node: '>=20.0.0'}
 
-  apcore-mcp@0.16.0:
-    resolution: {integrity: sha512-VgrTxHGQbamofV5CCOvo6TTSD2xT9bxgcjs692dD3GcYbH6lRSAiw7rOFtdb/Tv8COvSHvKqRX01tdAXVrLkDA==}
+  apcore-mcp@0.17.0:
+    resolution: {integrity: sha512-WYqTrdevPfdi/wG2D/x25SP6feO7Ykm8k7N2xbn0LPqGacp9e4alUPng+U9CO0Ck289EcpcV2becq8V9NNPGKQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  apcore-toolkit@0.8.1:
-    resolution: {integrity: sha512-GZ9BAcQ86ySxKkgUo6cFsQpMK+A+YAX4lkuJRf9CTIEmeWAXmpQfx+F0X3BwDtKanCC/XpeJzSPjbSb7GxaLJA==}
+  apcore-toolkit@0.9.1:
+    resolution: {integrity: sha512-DgaVCPto0MOjSwmrIFNa18JnvxS2jLAVomnAznE9mJJr6T8DiPeX/Td0V5ke3RldszBNaNfCGHZStfp8VYNAog==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@sinclair/typebox': '>=0.31.0'
@@ -2010,8 +2010,8 @@ snapshots:
   apcore-a2a@0.4.1(@sinclair/typebox@0.34.48):
     dependencies:
       '@a2a-js/sdk': 1.0.0-alpha.0(express@5.2.1)
-      apcore-js: 0.24.0
-      apcore-toolkit: 0.8.1(@sinclair/typebox@0.34.48)
+      apcore-js: 0.25.0
+      apcore-toolkit: 0.9.1(@sinclair/typebox@0.34.48)
       express: 5.2.1
       jsonwebtoken: 9.0.3
       uuid: 13.0.0
@@ -2021,27 +2021,27 @@ snapshots:
       - '@sinclair/typebox'
       - supports-color
 
-  apcore-cli@0.10.1(apcore-js@0.24.0)(apcore-toolkit@0.8.1(@sinclair/typebox@0.34.48)):
+  apcore-cli@0.10.2(apcore-js@0.25.0)(apcore-toolkit@0.9.1(@sinclair/typebox@0.34.48)):
     dependencies:
       '@sinclair/typebox': 0.34.48
-      apcore-js: 0.24.0
-      apcore-toolkit: 0.8.1(@sinclair/typebox@0.34.48)
+      apcore-js: 0.25.0
+      apcore-toolkit: 0.9.1(@sinclair/typebox@0.34.48)
       commander: 12.1.0
       js-yaml: 4.1.1
     optionalDependencies:
       keytar: 7.9.0
 
-  apcore-js@0.24.0:
+  apcore-js@0.25.0:
     dependencies:
       '@sinclair/typebox': 0.34.48
       js-yaml: 4.1.1
       uuid: 11.1.0
 
-  apcore-mcp@0.16.0(@sinclair/typebox@0.34.48)(zod@3.25.76):
+  apcore-mcp@0.17.0(@sinclair/typebox@0.34.48)(zod@3.25.76):
     dependencies:
       '@modelcontextprotocol/sdk': 1.27.1(zod@3.25.76)
-      apcore-js: 0.24.0
-      apcore-toolkit: 0.8.1(@sinclair/typebox@0.34.48)
+      apcore-js: 0.25.0
+      apcore-toolkit: 0.9.1(@sinclair/typebox@0.34.48)
       jsonwebtoken: 9.0.3
       mcp-embedded-ui: 0.4.0
     transitivePeerDependencies:
@@ -2050,11 +2050,11 @@ snapshots:
       - supports-color
       - zod
 
-  apcore-toolkit@0.8.1(@sinclair/typebox@0.34.48):
+  apcore-toolkit@0.9.1(@sinclair/typebox@0.34.48):
     dependencies:
       '@sinclair/typebox': 0.34.48
       ajv: 8.18.0
-      apcore-js: 0.24.0
+      apcore-js: 0.25.0
       js-yaml: 4.1.1
 
   apdev-js@0.2.0(typescript@5.9.3):

@@ -63,8 +63,8 @@ export class ApcoreRegistryService {
 
   // ---- delegated methods ----
 
-  register(moduleId: string, module: unknown): void {
-    this.registry.register(moduleId, module);
+  async register(moduleId: string, module: unknown): Promise<void> {
+    await this.registry.register(moduleId, module);
   }
 
   unregister(moduleId: string): boolean {
@@ -163,7 +163,7 @@ export class ApcoreRegistryService {
    *
    * @returns The module ID under which the method was registered.
    */
-  registerMethod(options: RegisterMethodOptions): string {
+  async registerMethod(options: RegisterMethodOptions): Promise<string> {
     const {
       instance,
       method,
@@ -208,7 +208,7 @@ export class ApcoreRegistryService {
     };
 
     const fm = scannedModuleToFunctionModule(scanned, execute);
-    this.registry.register(moduleId, fm);
+    await this.registry.register(moduleId, fm);
     return moduleId;
   }
 
@@ -221,7 +221,7 @@ export class ApcoreRegistryService {
    *
    * @returns An array of module IDs that were registered.
    */
-  registerService(options: RegisterServiceOptions): string[] {
+  async registerService(options: RegisterServiceOptions): Promise<string[]> {
     const {
       instance,
       description,
@@ -259,7 +259,7 @@ export class ApcoreRegistryService {
 
       const moduleId = perMethodOpts.id ?? `${ns}.${normalizedMethod}`;
 
-      const id = this.registerMethod({
+      const id = await this.registerMethod({
         instance,
         method: methodName,
         description: methodDesc,

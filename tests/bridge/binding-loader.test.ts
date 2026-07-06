@@ -12,6 +12,7 @@ function createMockRegistry() {
   const registry = {
     register: vi.fn((id: string, mod: unknown) => {
       registered.set(id, mod);
+      return Promise.resolve();
     }),
     unregister: vi.fn(),
     get: vi.fn((id: string) => registered.get(id) ?? null),
@@ -41,7 +42,7 @@ describe('ApBindingLoader', () => {
   // -----------------------------------------------------------------------
 
   describe('loadFromString()', () => {
-    it('parses YAML and registers a single module', () => {
+    it('parses YAML and registers a single module', async () => {
       const { registry } = createMockRegistry();
       const loader = new ApBindingLoader(registry);
 
@@ -52,7 +53,7 @@ bindings:
     description: "Send an email"
 `;
 
-      const ids = loader.loadFromString(yaml);
+      const ids = await loader.loadFromString(yaml);
 
       expect(ids).toEqual(['email.send']);
       expect(registry.register).toHaveBeenCalledTimes(1);
@@ -64,7 +65,7 @@ bindings:
       );
     });
 
-    it('registers multiple bindings', () => {
+    it('registers multiple bindings', async () => {
       const { registry } = createMockRegistry();
       const loader = new ApBindingLoader(registry);
 
@@ -81,14 +82,14 @@ bindings:
     description: "Create a user"
 `;
 
-      const ids = loader.loadFromString(yaml);
+      const ids = await loader.loadFromString(yaml);
 
       expect(ids).toHaveLength(3);
       expect(ids).toEqual(['email.send', 'email.list', 'user.create']);
       expect(registry.register).toHaveBeenCalledTimes(3);
     });
 
-    it('preserves annotations from binding', () => {
+    it('preserves annotations from binding', async () => {
       const { registry } = createMockRegistry();
       const loader = new ApBindingLoader(registry);
 
@@ -102,7 +103,7 @@ bindings:
       readonly: false
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       expect(registry.register).toHaveBeenCalledWith(
         'email.send',
@@ -112,7 +113,7 @@ bindings:
       );
     });
 
-    it('preserves tags from binding', () => {
+    it('preserves tags from binding', async () => {
       const { registry } = createMockRegistry();
       const loader = new ApBindingLoader(registry);
 
@@ -124,7 +125,7 @@ bindings:
     tags: ["email", "io"]
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       expect(registry.register).toHaveBeenCalledWith(
         'email.send',
@@ -134,7 +135,7 @@ bindings:
       );
     });
 
-    it('preserves documentation from binding', () => {
+    it('preserves documentation from binding', async () => {
       const { registry } = createMockRegistry();
       const loader = new ApBindingLoader(registry);
 
@@ -146,7 +147,7 @@ bindings:
     documentation: "Full documentation for the send email module."
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       expect(registry.register).toHaveBeenCalledWith(
         'email.send',
@@ -156,7 +157,7 @@ bindings:
       );
     });
 
-    it('uses default schemas (empty object) when not provided', () => {
+    it('uses default schemas (empty object) when not provided', async () => {
       const { registry } = createMockRegistry();
       const loader = new ApBindingLoader(registry);
 
@@ -167,7 +168,7 @@ bindings:
     description: "Send an email"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const call = (registry.register as ReturnType<typeof vi.fn>).mock.calls[0];
       const registeredModule = call[1];
@@ -176,7 +177,7 @@ bindings:
       expect(registeredModule.outputSchema).toBeDefined();
     });
 
-    it('passes custom input_schema and output_schema when provided', () => {
+    it('passes custom input_schema and output_schema when provided', async () => {
       const { registry } = createMockRegistry();
       const loader = new ApBindingLoader(registry);
 
@@ -199,7 +200,7 @@ bindings:
           type: boolean
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const call = (registry.register as ReturnType<typeof vi.fn>).mock.calls[0];
       const registeredModule = call[1];
@@ -220,14 +221,14 @@ bindings:
       });
     });
 
-    it('returns empty array for YAML with no bindings', () => {
+    it('returns empty array for YAML with no bindings', async () => {
       const { registry } = createMockRegistry();
       const loader = new ApBindingLoader(registry);
 
       const yaml = `
 bindings: []
 `;
-      const ids = loader.loadFromString(yaml);
+      const ids = await loader.loadFromString(yaml);
       expect(ids).toEqual([]);
       expect(registry.register).not.toHaveBeenCalled();
     });
@@ -238,7 +239,7 @@ bindings: []
   // -----------------------------------------------------------------------
 
   describe('instanceProvider', () => {
-    it('calls instanceProvider with className from target', () => {
+    it('calls instanceProvider with className from target', async () => {
       const { registry } = createMockRegistry();
       const instanceProvider = vi.fn().mockReturnValue(undefined);
       const loader = new ApBindingLoader(registry, instanceProvider);
@@ -250,7 +251,7 @@ bindings:
     description: "Send an email"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       expect(instanceProvider).toHaveBeenCalledWith('EmailService');
     });
@@ -271,7 +272,7 @@ bindings:
     description: "Send an email"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const mod = registered.get('email.send') as { execute: (inputs: Record<string, unknown>) => Promise<Record<string, unknown>> };
       expect(mod).toBeDefined();
@@ -295,7 +296,7 @@ bindings:
     description: "Send an email"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const mod = registered.get('email.send') as { execute: (inputs: Record<string, unknown>) => Promise<Record<string, unknown>> };
       const result = await mod.execute({});
@@ -316,7 +317,7 @@ bindings:
     description: "Send"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const mod = registered.get('email.send') as { execute: (inputs: Record<string, unknown>) => Promise<Record<string, unknown>> };
       const result = await mod.execute({});
@@ -337,7 +338,7 @@ bindings:
     description: "Send"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const mod = registered.get('email.send') as { execute: (inputs: Record<string, unknown>) => Promise<Record<string, unknown>> };
       const result = await mod.execute({});
@@ -358,7 +359,7 @@ bindings:
     description: "List items"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const mod = registered.get('items.list') as { execute: (inputs: Record<string, unknown>) => Promise<Record<string, unknown>> };
       const result = await mod.execute({});
@@ -381,7 +382,7 @@ bindings:
     description: "Send"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const mod = registered.get('email.send') as { execute: (inputs: Record<string, unknown>) => Promise<Record<string, unknown>> };
       const result = await mod.execute({ to: 'a@b.com' });
@@ -405,7 +406,7 @@ bindings:
     description: "Send"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const mod = registered.get('email.send') as { execute: (inputs: Record<string, unknown>) => Promise<Record<string, unknown>> };
       const result = await mod.execute({});
@@ -425,7 +426,7 @@ bindings:
     description: "Send"
 `;
 
-      loader.loadFromString(yaml);
+      await loader.loadFromString(yaml);
 
       const mod = registered.get('email.send') as { execute: (inputs: Record<string, unknown>) => Promise<Record<string, unknown>> };
       const result = await mod.execute({});

@@ -1,0 +1,12 @@
+default_effect: deny
+
+rules:
+  - callers: ["anonymous"]
+    targets: ["todo.list", "todo.get", "weather.*"]
+    effect: allow
+    description: "Anonymous callers may only read"
+
+  - callers: ["bearer"]
+    targets: ["todo.*", "weather.*"]
+    effect: allow
+    description: "Authenticated callers have full todo access"

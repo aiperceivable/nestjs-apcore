@@ -65,7 +65,7 @@ export class ApBindingLoader {
    * @param content - Raw YAML string
    * @returns Array of registered module IDs
    */
-  loadFromString(content: string): string[] {
+  async loadFromString(content: string): Promise<string[]> {
     const parsed = yaml.load(content) as BindingsFile;
     const bindings = parsed?.bindings ?? [];
     const ids: string[] = [];
@@ -109,7 +109,7 @@ export class ApBindingLoader {
       });
 
       const fm = scannedModuleToFunctionModule(scanned, execute);
-      this.registry.register(moduleId, fm);
+      await this.registry.register(moduleId, fm);
       ids.push(moduleId);
     }
 
@@ -124,6 +124,6 @@ export class ApBindingLoader {
    */
   async loadFromFile(filePath: string): Promise<string[]> {
     const content = await readFile(filePath, 'utf-8');
-    return this.loadFromString(content);
+    return await this.loadFromString(content);
   }
 }

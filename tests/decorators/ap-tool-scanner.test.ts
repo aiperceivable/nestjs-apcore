@@ -14,7 +14,7 @@ import { ApcoreRegistryService } from '../../src/core/apcore-registry.service.js
 // ---------------------------------------------------------------------------
 const { mockRegistry, MockRegistry } = vi.hoisted(() => {
   const _mockRegistry = {
-    register: vi.fn(),
+    register: vi.fn().mockResolvedValue(undefined),
     unregister: vi.fn(),
     get: vi.fn(),
     has: vi.fn().mockReturnValue(false),
@@ -191,7 +191,7 @@ async function buildTestModule(...providers: any[]) {
 
   // Manually trigger onModuleInit
   const scanner = moduleRef.get(ApToolScannerService);
-  scanner.onModuleInit();
+  await scanner.onModuleInit();
 
   return { moduleRef, scanner, registryService };
 }
