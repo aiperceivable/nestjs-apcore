@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-16
+
+Reachable role-based ACL governance for NestJS routes + dependency uplift to the aligned apcore 0.26.0 / apcore-mcp 0.17.2 governance train. All 448 tests pass.
+
+### Added
+
+- **ACL demo (`examples/acl_demo/`)** — runnable NestJS app showing apcore Access Control List enforcement on module calls, matching the shared cross-integration contract: an `acl.yaml` (admins may call anything; `orders.list` public; else denied), an `OrdersController` that calls `orders.delete` / `orders.list` through `ApcoreExecutorService` and maps `ACLDeniedError` → HTTP 403, and an `X-Roles` demo auth shortcut mapped to an apcore `Identity` via `NestContextFactory`. Covered end-to-end by `tests/integration/acl-demo.spec.ts` (4 cases: admin allowed, anonymous/non-admin denied, public read).
+
+### Fixed
+
+- **`NestContextFactory` dropped roles** — it built `createIdentity(id, type)` without forwarding roles, so apcore ACL rules keyed on `roles` (e.g. `roles: [admin]`) **never matched** and role-based access control silently did nothing from NestJS routes. Roles are now parsed from a comma-separated `X-Roles` header and passed to `createIdentity(id, type, roles)`.
+
+### Changed
+
+- **Dependency floors raised to the aligned governance train and loosened from caret to `>=`** (matching the first-party apcore-dependency convention, so future apcore minor releases need no downstream edits): `apcore-js >= 0.26.0` (was `>= 0.25.0`), `apcore-toolkit >= 0.10.0` (was `^0.9.1`), `apcore-mcp >= 0.17.2`, `apcore-cli >= 0.10.4`, `apcore-a2a >= 0.4.4`.
+
 ## [0.5.0] - 2026-07-06
 
 ### Added

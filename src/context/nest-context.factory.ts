@@ -47,18 +47,40 @@ export class NestContextFactory {
 
   private _extractIdentity(req: NestRequest): Identity {
     const headers = req.headers;
+    const roles = this._extractRoles(headers);
 
     const userId = headers['x-user-id'];
     if (typeof userId === 'string' && userId.length > 0) {
-      return createIdentity(userId, 'user');
+      return createIdentity(userId, 'user', roles);
     }
 
     const auth = headers['authorization'];
     if (typeof auth === 'string' && auth.toLowerCase().startsWith('bearer ')) {
-      return createIdentity('bearer', 'api_key');
+      return createIdentity('bearer', 'api_key', roles);
+    }
+
+    // An `x-roles` header alone (no user id) still identifies a roled user —
+    // a demo shortcut for role-based ACL without full authentication.
+    if (roles.length > 0) {
+      return createIdentity('u1', 'user', roles);
     }
 
     return createIdentity('anonymous', 'anonymous');
+  }
+
+  /** Extract roles from a comma-separated `x-roles` header. */
+  private _extractRoles(
+    headers: Record<string, string | string[] | undefined>,
+  ): string[] {
+    const raw = headers['x-roles'];
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (typeof value === 'string' && value.length > 0) {
+      return value
+        .split(',')
+        .map((r) => r.trim())
+        .filter((r) => r.length > 0);
+    }
+    return [];
   }
 
   private _extractData(req: NestRequest): Record<string, unknown> {

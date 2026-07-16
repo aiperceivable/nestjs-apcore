@@ -1,0 +1,7 @@
+# apcore configuration for the ACL demo.
+#
+# The demo loads acl.yaml explicitly by path (see app.module.ts), so this file
+# is only needed if you prefer CWD-based discovery via ACL.discover(config):
+#   run from this directory and ACL.discover() will pick up acl.root below.
+acl:
+  root: ./acl.yaml
