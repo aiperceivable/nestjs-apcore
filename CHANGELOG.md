@@ -20,6 +20,7 @@ Reachable role-based ACL governance for NestJS routes + dependency uplift to the
 ### Changed
 
 - **Dependency floors raised to the aligned governance train and loosened from caret to `>=`** (matching the first-party apcore-dependency convention, so future apcore minor releases need no downstream edits): `apcore-js >= 0.26.0` (was `>= 0.25.0`), `apcore-toolkit >= 0.10.0` (was `^0.9.1`), `apcore-mcp >= 0.17.2`, `apcore-cli >= 0.10.4`, `apcore-a2a >= 0.4.4`.
+- **Demo app moved to `examples/demo/`** (was `demo/`), consolidating all examples under `examples/` alongside the new `examples/acl_demo/`. README, the Dockerfile, and docker-compose were updated to the new build-context paths.
 
 ## [0.5.0] - 2026-07-06
 

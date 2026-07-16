@@ -18,11 +18,7 @@
     "noFallthroughCasesInSwitch": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["vitest/globals"],
-    "baseUrl": ".",
-    "paths": {
-      "nestjs-apcore": ["./src/index.ts"]
-    }
+    "types": ["vitest/globals"]
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

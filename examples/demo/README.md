@@ -11,7 +11,7 @@ A NestJS application showcasing how **nestjs-apcore** turns standard NestJS serv
 npm install
 npm run build
 
-cd demo
+cd examples/demo
 npm install
 npx tsx src/main.ts
 ```
@@ -22,7 +22,7 @@ npx tsx src/main.ts
 ### Docker
 
 ```bash
-cd demo
+cd examples/demo
 docker compose up --build
 ```
 
@@ -96,7 +96,7 @@ curl -X DELETE http://localhost:3000/todos/1
 ## Project Structure
 
 ```
-demo/
+examples/demo/
 ├── src/
 │   ├── main.ts                 # NestJS bootstrap (REST :3000 + MCP :8000)
 │   ├── app.module.ts           # Root module wiring
@@ -232,7 +232,7 @@ Remove `apcore.yaml` to disable all system tools.
 ## Project Structure
 
 ```
-demo/
+examples/demo/
 ├── acl.yaml                    # ACL rules (delete to disable ACL)
 ├── apcore.yaml                 # apcore config (sys_modules, log level)
 ├── src/

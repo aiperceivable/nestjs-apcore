@@ -382,10 +382,10 @@ All utilities are importable directly from `nestjs-apcore`.
 
 ## Examples
 
-The [`demo/`](./demo) directory contains a full working app with Todo and Weather services:
+The [`examples/demo/`](./examples/demo) directory contains a full working app with Todo and Weather services:
 
 ```bash
-cd demo
+cd examples/demo
 npm install
 npx tsx src/main.ts
 ```
