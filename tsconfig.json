@@ -6,6 +6,10 @@
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "nestjs-apcore": ["./src/index.ts"]
+    },
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
