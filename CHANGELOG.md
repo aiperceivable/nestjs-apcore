@@ -14,6 +14,7 @@ Dependency uplift to the aligned apcore 0.32.3 / apcore-toolkit 0.14.1 / apcore-
 - **Dependency floors raised** — `apcore-js >= 0.32.3`, `apcore-toolkit >= 0.14.1`, `apcore-mcp >= 0.23.4`, `apcore-cli >= 0.12.7`, `apcore-a2a >= 0.8.5`.
 - **Node.js floor raised to >= 20** — every upgraded apcore SDK declares `engines.node >= 20`. CI now runs Node 20.
 - **MCP option forwarding completed** — `observability`, `outputFormat`, `redactOutput`, `trace`, `strategy`, `approvalStore`, `approvalNotify`, `mcpMiddleware`, and `mcpAcl` are now passed to `serve()` / `asyncServe()`. `mcpMiddleware` / `mcpAcl` map to apcore-mcp's `middleware` / `acl` option names.
+- **pnpm supply-chain policy config added** — `pnpm-workspace.yaml` excludes the freshly published `apcore-mcp@0.23.4` from the minimum-release-age gate and allowlists the `esbuild` / `keytar` build scripts, so `pnpm install` works on a clean checkout. The demo's Dockerfile copies the same config.
 
 ### Fixed
 

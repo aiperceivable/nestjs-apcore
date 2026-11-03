@@ -1,0 +1,5 @@
+minimumReleaseAgeExclude:
+  - apcore-mcp@0.23.4
+allowBuilds:
+  esbuild: true
+  keytar: true

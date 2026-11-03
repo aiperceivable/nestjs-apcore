@@ -10,14 +10,14 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /workspace/nestjs-apcore
 
 # ---- Build nestjs-apcore library ----
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY src/ ./src/
 COPY tsconfig*.json ./
 RUN pnpm run build
 
 # ---- Install demo dependencies ----
-COPY examples/demo/package.json examples/demo/pnpm-lock.yaml ./demo/
+COPY examples/demo/package.json examples/demo/pnpm-lock.yaml examples/demo/pnpm-workspace.yaml ./demo/
 WORKDIR /workspace/nestjs-apcore/demo
 RUN pnpm install --frozen-lockfile
 
