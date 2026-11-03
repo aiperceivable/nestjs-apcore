@@ -101,6 +101,8 @@ bindings:
     annotations:
       destructive: true
       readonly: false
+      requires_approval: true
+      open_world: false
 `;
 
       await loader.loadFromString(yaml);
@@ -108,7 +110,12 @@ bindings:
       expect(registry.register).toHaveBeenCalledWith(
         'email.send',
         expect.objectContaining({
-          annotations: expect.objectContaining({ destructive: true, readonly: false }),
+          annotations: expect.objectContaining({
+            destructive: true,
+            readonly: false,
+            requiresApproval: true,
+            openWorld: false,
+          }),
         }),
       );
     });

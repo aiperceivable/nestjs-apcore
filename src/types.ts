@@ -28,6 +28,10 @@ export interface ApToolAnnotations {
   cacheKeyFields?: string[] | null;
   paginated?: boolean;
   paginationStyle?: 'cursor' | 'offset' | 'page';
+  /** Whether the module appears in enumeration surfaces. Default: true. */
+  discoverable?: boolean;
+  /** Extension dictionary for ecosystem package metadata. */
+  extra?: Record<string, unknown>;
 }
 
 /** Example entry for a tool invocation. */

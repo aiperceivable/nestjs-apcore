@@ -33,7 +33,7 @@ npm install class-validator class-transformer  # DtoAdapter
 npm install @sinclair/typebox                  # TypeBoxAdapter (recommended)
 ```
 
-**Requirements:** Node.js >= 18, NestJS >= 10 (tested with NestJS 11)
+**Requirements:** Node.js >= 20, NestJS >= 10 (tested with NestJS 11)
 
 ## Quick Start
 

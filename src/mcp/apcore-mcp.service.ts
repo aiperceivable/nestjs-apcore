@@ -10,9 +10,22 @@ import type { ApcoreMcpModuleOptions } from '../types.js';
 /** Keys shared between serve() and asyncServe() option forwarding. */
 const SHARED_OPTION_KEYS = [
   'name', 'version', 'tags', 'prefix', 'validateInputs', 'logLevel',
-  'metricsCollector', 'authenticator', 'requireAuth', 'exemptPaths',
-  'approvalHandler', 'outputFormatter',
+  'metricsCollector', 'observability', 'authenticator', 'requireAuth',
+  'exemptPaths', 'approvalHandler', 'approvalStore', 'approvalNotify',
+  'outputFormatter', 'outputFormat', 'redactOutput', 'trace', 'strategy',
 ] as const;
+
+/**
+ * Module option names that differ from their apcore-mcp counterpart.
+ *
+ * `mcpMiddleware` / `mcpAcl` exist so the MCP-scoped surfaces do not collide
+ * with the module-level `middleware` / `acl` options; apcore-mcp expects the
+ * unprefixed names.
+ */
+const RENAMED_OPTION_KEYS = {
+  mcpMiddleware: 'middleware',
+  mcpAcl: 'acl',
+} as const;
 
 /** Keys only used by serve() (transport-specific). */
 const SERVE_ONLY_KEYS = [
@@ -72,6 +85,7 @@ export class ApcoreMcpService implements OnApplicationBootstrap, OnModuleDestroy
     const serveOptions = {
       ...this.collectOptions(SHARED_OPTION_KEYS),
       ...this.collectOptions(SERVE_ONLY_KEYS),
+      ...this.collectRenamedOptions(),
     };
 
     await serve(this.executor.raw as unknown as RegistryOrExecutor, serveOptions);
@@ -91,6 +105,7 @@ export class ApcoreMcpService implements OnApplicationBootstrap, OnModuleDestroy
   }): Promise<AsyncServeApp> {
     const asyncOptions: Record<string, unknown> = {
       ...this.collectOptions(SHARED_OPTION_KEYS),
+      ...this.collectRenamedOptions(),
     };
 
     // Forward per-call options
@@ -171,6 +186,20 @@ export class ApcoreMcpService implements OnApplicationBootstrap, OnModuleDestroy
       const value = (this.options as Record<string, unknown>)[key];
       if (value !== undefined) {
         result[key] = value;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Collect options whose module-level name differs from the apcore-mcp name.
+   */
+  private collectRenamedOptions(): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    for (const [from, to] of Object.entries(RENAMED_OPTION_KEYS)) {
+      const value = (this.options as Record<string, unknown>)[from];
+      if (value !== undefined) {
+        result[to] = value;
       }
     }
     return result;

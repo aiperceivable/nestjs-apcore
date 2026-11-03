@@ -25,6 +25,36 @@ describe('toModuleAnnotations', () => {
     }));
   });
 
+  it('preserves discoverable and extra annotations', () => {
+    const result = toModuleAnnotations({
+      discoverable: false,
+      extra: { 'x-owner': 'billing' },
+    });
+
+    expect(result).toMatchObject({
+      discoverable: false,
+      extra: { 'x-owner': 'billing' },
+    });
+  });
+
+  it('normalises snake_case wire annotations to camelCase fields', () => {
+    const result = toModuleAnnotations({
+      requires_approval: true,
+      open_world: false,
+      cache_ttl: 60,
+      cache_key_fields: ['id'],
+      pagination_style: 'cursor',
+    } as never);
+
+    expect(result).toMatchObject({
+      requiresApproval: true,
+      openWorld: false,
+      cacheTtl: 60,
+      cacheKeyFields: ['id'],
+      paginationStyle: 'cursor',
+    });
+  });
+
   it('preserves all supplied fields', () => {
     const result = toModuleAnnotations({
       readonly: true,
@@ -105,6 +135,40 @@ describe('scannedModuleToFunctionModule', () => {
     });
     const fm = scannedModuleToFunctionModule(scanned, async () => ({}));
     expect(fm.metadata).toBeNull();
+  });
+
+  it('preserves camelCase annotations for apcore governance', () => {
+    const scanned = createScannedModule({
+      moduleId: 'test.governed',
+      description: 'governed',
+      inputSchema: { type: 'object', properties: {} },
+      outputSchema: { type: 'object', properties: {} },
+      tags: [],
+      target: 'T.m',
+      annotations: {
+        readonly: false,
+        destructive: true,
+        idempotent: false,
+        requiresApproval: true,
+        openWorld: false,
+        streaming: false,
+        cacheable: false,
+        cacheTtl: 0,
+        cacheKeyFields: null,
+        paginated: false,
+        paginationStyle: 'offset',
+        extra: {},
+      },
+    });
+
+    const fm = scannedModuleToFunctionModule(scanned, async () => ({}));
+
+    expect(fm.annotations).toMatchObject({
+      requiresApproval: true,
+      openWorld: false,
+      destructive: true,
+      paginationStyle: 'offset',
+    });
   });
 
   it('passes tags as array or null', () => {

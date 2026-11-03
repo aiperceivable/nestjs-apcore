@@ -166,7 +166,7 @@ class AnnotatedModuleService {
   @ApTool({
     description: 'Tool with merged annotations',
     tags: ['tool-tag'],
-    annotations: { destructive: true },
+    annotations: { destructive: true, requiresApproval: true },
   })
   action(inputs: Record<string, unknown>) {
     return inputs;
@@ -438,7 +438,9 @@ describe('ApToolScannerService', () => {
       await buildTestModule(AnnotatedModuleService);
 
       const [, registeredModule] = mockRegistry.register.mock.calls[0];
-      expect(registeredModule.annotations).toEqual(expect.objectContaining({ destructive: true }));
+      expect(registeredModule.annotations).toEqual(
+        expect.objectContaining({ destructive: true, requiresApproval: true }),
+      );
       expect(registeredModule.tags).toEqual(['tool-tag']);
     });
   });

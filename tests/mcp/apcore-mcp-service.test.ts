@@ -192,6 +192,48 @@ describe('ApcoreMcpService', () => {
       });
     });
 
+    it('passes governance, observability, and output options to serve()', async () => {
+      const approvalHandler = { checkApproval: vi.fn() };
+      const approvalStore = { get: vi.fn(), put: vi.fn() };
+      const approvalNotify = vi.fn();
+      const outputFormatter = vi.fn();
+      const middleware = [{ priority: 1 }];
+      const acl = { check: vi.fn() };
+
+      const opts: ApcoreMcpModuleOptions = {
+        transport: 'streamable-http',
+        observability: true,
+        outputFormat: 'json',
+        redactOutput: false,
+        trace: true,
+        strategy: 'standard',
+        approvalHandler,
+        approvalStore,
+        approvalNotify,
+        outputFormatter,
+        mcpMiddleware: middleware,
+        mcpAcl: acl,
+      };
+      service = new ApcoreMcpService(registry, executor, opts);
+
+      await service.start();
+
+      expect(serve).toHaveBeenCalledWith(executor.raw, {
+        transport: 'streamable-http',
+        observability: true,
+        outputFormat: 'json',
+        redactOutput: false,
+        trace: true,
+        strategy: 'standard',
+        approvalHandler,
+        approvalStore,
+        approvalNotify,
+        outputFormatter,
+        middleware,
+        acl,
+      });
+    });
+
     it('passes authenticator, requireAuth, and exemptPaths to serve()', async () => {
       const mockAuthenticator = {
         authenticate: vi.fn().mockResolvedValue(null),
@@ -350,6 +392,24 @@ describe('ApcoreMcpService', () => {
           requireAuth: false,
           endpoint: '/custom-mcp',
         }),
+      );
+    });
+
+    it('forwards renamed middleware and ACL options to asyncServe()', async () => {
+      const { asyncServe: mockAsyncServe } = await import('apcore-mcp');
+      const middleware = [{ priority: 1 }];
+      const acl = { check: vi.fn() };
+      const opts: ApcoreMcpModuleOptions = {
+        mcpMiddleware: middleware,
+        mcpAcl: acl,
+      };
+      const svc = new ApcoreMcpService(registry, executor, opts);
+
+      await svc.asyncServe();
+
+      expect(mockAsyncServe).toHaveBeenCalledWith(
+        executor.raw,
+        expect.objectContaining({ middleware, acl }),
       );
     });
 

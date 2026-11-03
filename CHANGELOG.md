@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-11-03
+
+Dependency uplift to the aligned apcore 0.32.3 / apcore-toolkit 0.14.1 / apcore-mcp 0.23.4 / apcore-cli 0.12.7 / apcore-a2a 0.8.5 train. All 453 tests pass.
+
+### Changed
+
+- **Dependency floors raised** — `apcore-js >= 0.32.3`, `apcore-toolkit >= 0.14.1`, `apcore-mcp >= 0.23.4`, `apcore-cli >= 0.12.7`, `apcore-a2a >= 0.8.5`.
+- **Node.js floor raised to >= 20** — every upgraded apcore SDK declares `engines.node >= 20`. CI now runs Node 20.
+- **MCP option forwarding completed** — `observability`, `outputFormat`, `redactOutput`, `trace`, `strategy`, `approvalStore`, `approvalNotify`, `mcpMiddleware`, and `mcpAcl` are now passed to `serve()` / `asyncServe()`. `mcpMiddleware` / `mcpAcl` map to apcore-mcp's `middleware` / `acl` option names.
+
+### Fixed
+
+- **`@ApTool` / `@ApModule` annotations were silently dropped by apcore's field-level merge** — `scannedModuleToFunctionModule()` converted camelCase `ModuleAnnotations` to the snake_case wire form before constructing `FunctionModule`, so multi-word fields (`requiresApproval`, `openWorld`, `cacheTtl`, `cacheKeyFields`, `paginationStyle`) never reached the registry. Annotations now stay camelCase, and `toModuleAnnotations()` additionally accepts snake_case binding YAML keys. `ApToolAnnotations` also exposes apcore's `discoverable` and `extra` fields.
+- **`examples/demo` dependency floors** now track the upgraded SDK train.
+
 ## [0.6.0] - 2026-07-16
 
 Reachable role-based ACL governance for NestJS routes + dependency uplift to the aligned apcore 0.26.0 / apcore-mcp 0.17.2 governance train. All 448 tests pass.

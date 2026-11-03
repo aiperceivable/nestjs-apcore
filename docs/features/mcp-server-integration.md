@@ -87,9 +87,21 @@ export class AppModule {}
 | `logLevel` | `'DEBUG' \| 'INFO' \| 'WARNING' \| 'ERROR' \| 'CRITICAL'` | — | Log verbosity. |
 | `onStartup` | `() => void \| Promise<void>` | — | Callback after server starts. |
 | `onShutdown` | `() => void \| Promise<void>` | — | Callback before server stops. |
-| `metricsCollector` | `{ exportPrometheus(): string }` | — | Enables `/metrics` Prometheus endpoint. |
+| `metricsCollector` | `MetricsExporter \| true` | — | Enables `/metrics` Prometheus endpoint; `true` auto-instantiates. |
+| `observability` | `ObservabilityFlag` | — | Full stack: metrics + usage middleware + `/usage` endpoint. |
 | `authenticator` | `Authenticator` | — | JWT or custom auth strategy. |
+| `requireAuth` | `boolean` | `true` | Reject unauthenticated requests. |
 | `exemptPaths` | `string[]` | `['/health', '/metrics']` | Paths that bypass authentication. |
+| `approvalHandler` | `unknown` | — | Custom approval handler for the executor. |
+| `approvalStore` | `ApprovalStore` | — | Pluggable approval store; auto-wires `StorageBackedApprovalHandler`. |
+| `approvalNotify` | `(approvalId, moduleId, args) => Promise<void>` | — | Callback on a new approval request. |
+| `outputFormatter` | `(result) => string` | — | Custom result formatter for LLM consumption. |
+| `outputFormat` | `'json' \| 'csv' \| 'jsonl'` | — | Built-in result serialisation format. |
+| `redactOutput` | `boolean` | `true` | Redact sensitive fields from tool output. |
+| `trace` | `boolean` | `false` | Attach pipeline trace to tool responses. |
+| `strategy` | `string` | — | Execution strategy name (e.g. `"standard"`, `"minimal"`). |
+| `mcpMiddleware` | `unknown[]` | — | Extra apcore middleware to install on the MCP executor. |
+| `mcpAcl` | `unknown` | — | apcore ACL instance for this MCP server. |
 
 **Registration:**
 
