@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-11-08
+
+### Changed
+
+- Raise the optional `apcore-mcp` peer floor to **0.23.5**, the first release
+  whose Async Task Bridge matches `apcore-js` 0.32.3 (options constructor,
+  `{ context }` submit, async `getStatus` / `listTasks`). 0.23.4 could install
+  against 0.32.3 but failed at runtime. No source code changes are required.
+- Add an end-to-end async task bridge test (submit → status) against the
+  published `apcore-mcp` 0.23.5.
+
 ## [0.7.0] - 2026-11-03
 
 Dependency uplift to the aligned apcore 0.32.3 / apcore-toolkit 0.14.1 / apcore-mcp 0.23.4 / apcore-cli 0.12.7 / apcore-a2a 0.8.5 train. All 453 tests pass.
