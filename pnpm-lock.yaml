@@ -46,14 +46,14 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(supports-color@7.2.0)(vitest@3.2.4(@types/node@20.19.34)(supports-color@7.2.0))
       apcore-a2a:
-        specifier: '>=0.8.5'
-        version: 0.8.5(@sinclair/typebox@0.34.48)(supports-color@7.2.0)
+        specifier: '>=0.8.6'
+        version: 0.8.6(@sinclair/typebox@0.34.48)(supports-color@7.2.0)
       apcore-cli:
-        specifier: '>=0.12.7'
-        version: 0.12.7(apcore-js@0.32.3)(apcore-toolkit@0.14.2(@sinclair/typebox@0.34.48))
+        specifier: '>=0.12.9'
+        version: 0.12.9(apcore-js@0.32.3)(apcore-toolkit@0.14.2(@sinclair/typebox@0.34.48))
       apcore-mcp:
-        specifier: '>=0.23.4'
-        version: 0.23.4(@sinclair/typebox@0.34.48)(supports-color@7.2.0)(zod@3.25.76)
+        specifier: '>=0.23.6'
+        version: 0.23.6(@sinclair/typebox@0.34.48)(supports-color@7.2.0)(zod@3.25.76)
       apdev-js:
         specifier: ^0.2.0
         version: 0.2.0(typescript@5.9.3)
@@ -618,25 +618,25 @@ packages:
     resolution: {integrity: sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==}
     engines: {node: '>=12'}
 
-  apcore-a2a@0.8.5:
-    resolution: {integrity: sha512-FLdwejVRXZuhV+VOF2kNSgNXK8w9wqVZ7wb7/Ft+oqpjkMh8z5kDm/xrK6+auICbMS/NyodvHIPNRzo5P2KvJw==}
+  apcore-a2a@0.8.6:
+    resolution: {integrity: sha512-XBP6KeyOLN/uflFiD3BVrHVlWeoFnRlzFBxQU3N4lb3JVjKFmtCd4uda4B1d4DqH72W+p0c5SkDSCgVWN1cwGQ==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  apcore-cli@0.12.7:
-    resolution: {integrity: sha512-JBKk/HYP2RXuWKimfD+mBMOAVRyilYayKNSnE6mK16MxH1HWtdpfLfHJY5w/eOEGwCOVRC2YgGxwIFfM4PNydg==}
+  apcore-cli@0.12.9:
+    resolution: {integrity: sha512-gbTFIesPv5UQWCD1eR96Gjyq8+rlMltf1lR/BnpVgmSRbk6GJejvK8X8fGZoBu26tlPSVhL5yTiu9oeT4e6Ujw==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
       apcore-js: '>=0.32.3'
-      apcore-toolkit: '>=0.14.1'
+      apcore-toolkit: '>=0.14.2'
 
   apcore-js@0.32.3:
     resolution: {integrity: sha512-kmIDULt35c4vv9fxopnUomDi2Vvb9TzX4JdO9xfv6+XAE62OxuH4a6cvIQCuu62A5ESsIiwa2evhNX+PbPyqtA==}
     engines: {node: '>=20.0.0'}
 
-  apcore-mcp@0.23.4:
-    resolution: {integrity: sha512-U6v4vyvj3l5RwjtkSc1s7faiAJjnWLBF3x/Ym7167rPtyat4Kj7af7a6LW+zI6SXcTfLaZ6LuFF7OtnIVcwOhw==}
+  apcore-mcp@0.23.6:
+    resolution: {integrity: sha512-YKC8IVRsmjpyRxop96r9ofbVzPSZxuFlmytcpOzL8Ujn9GuRipPz2dymD4siYpaE0EkhOBivbZwkGAxZJ/vZdQ==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
@@ -2010,7 +2010,7 @@ snapshots:
 
   ansi-styles@6.2.3: {}
 
-  apcore-a2a@0.8.5(@sinclair/typebox@0.34.48)(supports-color@7.2.0):
+  apcore-a2a@0.8.6(@sinclair/typebox@0.34.48)(supports-color@7.2.0):
     dependencies:
       '@a2a-js/sdk': 1.3.0(express@5.2.1(supports-color@7.2.0))
       apcore-js: 0.32.3
@@ -2028,7 +2028,7 @@ snapshots:
       - pg
       - supports-color
 
-  apcore-cli@0.12.7(apcore-js@0.32.3)(apcore-toolkit@0.14.2(@sinclair/typebox@0.34.48)):
+  apcore-cli@0.12.9(apcore-js@0.32.3)(apcore-toolkit@0.14.2(@sinclair/typebox@0.34.48)):
     dependencies:
       '@sinclair/typebox': 0.34.48
       apcore-js: 0.32.3
@@ -2044,7 +2044,7 @@ snapshots:
       js-yaml: 4.1.1
       uuid: 11.1.0
 
-  apcore-mcp@0.23.4(@sinclair/typebox@0.34.48)(supports-color@7.2.0)(zod@3.25.76):
+  apcore-mcp@0.23.6(@sinclair/typebox@0.34.48)(supports-color@7.2.0)(zod@3.25.76):
     dependencies:
       '@modelcontextprotocol/sdk': 1.27.1(supports-color@7.2.0)(zod@3.25.76)
       ajv: 8.18.0

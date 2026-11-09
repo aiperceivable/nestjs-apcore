@@ -1,6 +1,8 @@
 minimumReleaseAgeExclude:
-  - apcore-mcp@0.23.4
+  - apcore-mcp@0.23.4 || 0.23.6
   - apcore-toolkit@0.14.2
+  - apcore-cli@0.12.9
+  - apcore-a2a@0.8.6
 allowBuilds:
   esbuild: true
   keytar: true
