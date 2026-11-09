@@ -1,6 +1,6 @@
 {
   "name": "nestjs-apcore",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "NestJS adapter for the apcore AI-Perceivable module ecosystem",
   "type": "module",
   "main": "./dist/index.js",
@@ -32,9 +32,9 @@
   "peerDependencies": {
     "@nestjs/common": ">=10.0.0",
     "@nestjs/core": ">=10.0.0",
-    "apcore-a2a": ">=0.8.5",
-    "apcore-cli": ">=0.12.7",
-    "apcore-mcp": ">=0.23.5",
+    "apcore-a2a": ">=0.8.6",
+    "apcore-cli": ">=0.12.9",
+    "apcore-mcp": ">=0.23.6",
     "reflect-metadata": ">=0.1.13",
     "rxjs": ">=7.0.0"
   },
