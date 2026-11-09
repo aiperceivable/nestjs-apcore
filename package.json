@@ -1,6 +1,6 @@
 {
   "name": "nestjs-apcore",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "NestJS adapter for the apcore AI-Perceivable module ecosystem",
   "type": "module",
   "main": "./dist/index.js",
@@ -61,7 +61,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
     "apcore-js": ">=0.32.3",
-    "apcore-toolkit": ">=0.14.1",
+    "apcore-toolkit": ">=0.14.2",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {

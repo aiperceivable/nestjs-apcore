@@ -15,8 +15,8 @@ importers:
         specifier: '>=0.32.3'
         version: 0.32.3
       apcore-toolkit:
-        specifier: '>=0.14.1'
-        version: 0.14.1(@sinclair/typebox@0.34.48)
+        specifier: '>=0.14.2'
+        version: 0.14.2(@sinclair/typebox@0.34.48)
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -50,7 +50,7 @@ importers:
         version: 0.8.5(@sinclair/typebox@0.34.48)(supports-color@7.2.0)
       apcore-cli:
         specifier: '>=0.12.7'
-        version: 0.12.7(apcore-js@0.32.3)(apcore-toolkit@0.14.1(@sinclair/typebox@0.34.48))
+        version: 0.12.7(apcore-js@0.32.3)(apcore-toolkit@0.14.2(@sinclair/typebox@0.34.48))
       apcore-mcp:
         specifier: '>=0.23.4'
         version: 0.23.4(@sinclair/typebox@0.34.48)(supports-color@7.2.0)(zod@3.25.76)
@@ -598,11 +598,6 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
 
   ajv@8.18.0:
     resolution: {integrity: sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==}
@@ -645,9 +640,9 @@ packages:
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  apcore-toolkit@0.14.1:
-    resolution: {integrity: sha512-sB0rkV54b2XYz6o2yQWCUZ9KF2YWR+ETXtn1jDjVIvNxy2WNF/+7BDqQBbxbAwwTLz7+iP8WDJ+26RXz2XWEGA==}
-    engines: {node: '>=20.0.0'}
+  apcore-toolkit@0.14.2:
+    resolution: {integrity: sha512-BQJdq5mVHKMvkDEbocqHkGioj+B+25gicyP1v5Tx2t7qIccyXQsZvALgEUyt40/aXZDJz6+cYtvYAo1r8SotFw==}
+    engines: {node: '>=20.10.0'}
     peerDependencies:
       '@sinclair/typebox': '>=0.31.0'
 
@@ -754,7 +749,6 @@ packages:
 
   concat-stream@2.0.0:
     resolution: {integrity: sha512-MWufYdFw53ccGjCA+Ol7XJYpAlW6/prSMzuPOTRnJGcGzuhLn4Scrz7qf6o8bROZ514ltazcIFJZevcfbo0x7A==}
-    engines: {'0': node >= 6.0}
 
   content-disposition@1.0.1:
     resolution: {integrity: sha512-oIXISMynqSqm241k6kcQ5UwttDILMK4BiurCfGEREw6+X9jkkpEe5T9FZaApyLGGOnFuyMWZpdolTXMtvEJ08Q==}
@@ -1036,9 +1030,6 @@ packages:
 
   jackspeak@3.4.3:
     resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
-
-  jose@6.1.3:
-    resolution: {integrity: sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ==}
 
   jose@6.2.3:
     resolution: {integrity: sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw==}
@@ -1760,7 +1751,7 @@ snapshots:
     dependencies:
       '@hono/node-server': 1.19.9(hono@4.12.2)
       ajv: 8.18.0
-      ajv-formats: 3.0.1(ajv@8.18.0)
+      ajv-formats: 3.0.1
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
@@ -1769,7 +1760,7 @@ snapshots:
       express: 5.2.1(supports-color@7.2.0)
       express-rate-limit: 8.2.1(express@5.2.1(supports-color@7.2.0))
       hono: 4.12.2
-      jose: 6.1.3
+      jose: 6.2.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
@@ -1998,8 +1989,8 @@ snapshots:
       mime-types: 3.0.2
       negotiator: 1.0.0
 
-  ajv-formats@3.0.1(ajv@8.18.0):
-    optionalDependencies:
+  ajv-formats@3.0.1:
+    dependencies:
       ajv: 8.18.0
 
   ajv@8.18.0:
@@ -2023,7 +2014,7 @@ snapshots:
     dependencies:
       '@a2a-js/sdk': 1.3.0(express@5.2.1(supports-color@7.2.0))
       apcore-js: 0.32.3
-      apcore-toolkit: 0.14.1(@sinclair/typebox@0.34.48)
+      apcore-toolkit: 0.14.2(@sinclair/typebox@0.34.48)
       express: 5.2.1(supports-color@7.2.0)
       jsonwebtoken: 9.0.3
       uuid: 13.0.0
@@ -2037,11 +2028,11 @@ snapshots:
       - pg
       - supports-color
 
-  apcore-cli@0.12.7(apcore-js@0.32.3)(apcore-toolkit@0.14.1(@sinclair/typebox@0.34.48)):
+  apcore-cli@0.12.7(apcore-js@0.32.3)(apcore-toolkit@0.14.2(@sinclair/typebox@0.34.48)):
     dependencies:
       '@sinclair/typebox': 0.34.48
       apcore-js: 0.32.3
-      apcore-toolkit: 0.14.1(@sinclair/typebox@0.34.48)
+      apcore-toolkit: 0.14.2(@sinclair/typebox@0.34.48)
       commander: 12.1.0
       js-yaml: 4.1.1
     optionalDependencies:
@@ -2058,7 +2049,7 @@ snapshots:
       '@modelcontextprotocol/sdk': 1.27.1(supports-color@7.2.0)(zod@3.25.76)
       ajv: 8.18.0
       apcore-js: 0.32.3
-      apcore-toolkit: 0.14.1(@sinclair/typebox@0.34.48)
+      apcore-toolkit: 0.14.2(@sinclair/typebox@0.34.48)
       jsonwebtoken: 9.0.3
       mcp-embedded-ui: 0.5.0
     transitivePeerDependencies:
@@ -2067,7 +2058,7 @@ snapshots:
       - supports-color
       - zod
 
-  apcore-toolkit@0.14.1(@sinclair/typebox@0.34.48):
+  apcore-toolkit@0.14.2(@sinclair/typebox@0.34.48):
     dependencies:
       '@sinclair/typebox': 0.34.48
       ajv: 8.18.0
@@ -2498,8 +2489,6 @@ snapshots:
     optionalDependencies:
       '@pkgjs/parseargs': 0.11.0
 
-  jose@6.1.3: {}
-
   jose@6.2.3: {}
 
   js-tokens@10.0.0: {}
@@ -2585,7 +2574,7 @@ snapshots:
   mcp-embedded-ui@0.5.0:
     dependencies:
       ajv: 8.18.0
-      ajv-formats: 3.0.1(ajv@8.18.0)
+      ajv-formats: 3.0.1
 
   media-typer@0.3.0: {}
 
