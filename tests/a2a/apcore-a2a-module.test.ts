@@ -11,7 +11,7 @@ vi.mock('apcore-js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('apcore-js')>();
   return {
     ...actual,
-    Registry: vi.fn().mockImplementation(() => ({
+    Registry: vi.fn(function () { return {
       register: vi.fn(),
       unregister: vi.fn(),
       get: vi.fn(),
@@ -21,13 +21,13 @@ vi.mock('apcore-js', async (importOriginal) => {
       on: vi.fn(),
       discover: vi.fn().mockResolvedValue(0),
       count: 0,
-    })),
-    Executor: vi.fn().mockImplementation(() => ({
+    }; }),
+    Executor: vi.fn(function () { return {
       call: vi.fn(),
       callAsync: vi.fn(),
       stream: vi.fn(),
       validate: vi.fn(),
-    })),
+    }; }),
     normalizeResult: vi.fn((v: unknown) => v),
   };
 });

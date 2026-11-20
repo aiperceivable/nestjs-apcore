@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SchemaValidator, jsonSchemaToTypeBox } from 'apcore-js';
 import { ZodAdapter } from '../../src/schema/adapters/zod.adapter.js';
 import type { SchemaAdapter } from '../../src/schema/adapters/schema-adapter.interface.js';
 
@@ -11,6 +12,21 @@ describe('ZodAdapter', () => {
 
   beforeEach(() => {
     adapter = new ZodAdapter();
+  });
+
+  it.each([
+    { name: 'null literal', schema: z.object({ value: z.literal(null) }), input: { value: null }, valid: true },
+    { name: 'wrapped optional', schema: z.object({ value: z.string().optional().readonly() }), input: {}, valid: true },
+    { name: 'strict object', schema: z.strictObject({ value: z.string() }), input: { value: 'ok', extra: true }, valid: false },
+    { name: 'ordinary object', schema: z.object({ value: z.string() }), input: { value: 'ok', extra: true }, valid: true },
+    { name: 'int32 upper boundary', schema: z.object({ value: z.int32() }), input: { value: 2_147_483_647 }, valid: true },
+    { name: 'int32 overflow', schema: z.object({ value: z.int32() }), input: { value: 2_147_483_648 }, valid: false },
+    { name: 'int32 with a tighter bound', schema: z.object({ value: z.int32().max(10) }), input: { value: 11 }, valid: false },
+    { name: 'unsafe chained integer', schema: z.object({ value: z.number().int() }), input: { value: 2 ** 53 }, valid: false },
+  ])('preserves Zod input validation through APCore for $name', ({ schema, input, valid }) => {
+    const converted = jsonSchemaToTypeBox(adapter.extractJsonSchema(schema));
+    expect(schema.safeParse(input).success).toBe(valid);
+    expect(new SchemaValidator().validate(input, converted).valid).toBe(valid);
   });
 
   // ---- metadata ----
@@ -205,6 +221,11 @@ describe('ZodAdapter', () => {
   describe('number constraints', () => {
     it('converts z.number().int() to { type: "integer" }', () => {
       const result = adapter.extractJsonSchema(z.number().int());
+      expect(result['type']).toBe('integer');
+    });
+
+    it('converts the Zod 4 z.int() shorthand to { type: "integer" }', () => {
+      const result = adapter.extractJsonSchema(z.int());
       expect(result['type']).toBe('integer');
     });
 

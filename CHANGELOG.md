@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] - 2026-11-20
+
+### Added
+
+- `ZodAdapter` now understands **Zod 4** as well as Zod 3. Detection and
+  conversion remain structural (Zod is never imported): Zod 4 is recognised by
+  `_zod.def.type`, Zod 3 by `_def.typeName`, so the adapter works with either
+  major version installed by the host application.
+- Zod 4 support covers string formats (`email`, `url`, `uuid`), length checks,
+  numeric bounds, `multipleOf`, records, pipes/transforms, `default` /
+  `prefault`, literals, enums, and `z.int()` / `z.int32()` (mapped to JSON
+  Schema `integer`).
+
+### Fixed
+
+- Preserve Zod 4 null literals, optional fields inside wrappers, strict
+  objects, and integer-format bounds when validating module inputs through
+  APCore.
+
+### Security
+
+- Upgrade `@modelcontextprotocol/sdk` to `^1.32.0` and the runtime dependency
+  `js-yaml` to `^4.3.2`.
+
+### Changed
+
+- Development dependency `zod` moves from 3 to 4; the runtime adapter keeps
+  supporting both major versions.
+- Refresh the development toolchain to `vitest` / `@vitest/coverage-v8` 5.1.0,
+  and include Node types in `tsconfig.json`.
+
 ## [0.7.2] - 2026-11-09
 
 ### Changed

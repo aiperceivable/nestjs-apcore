@@ -36,8 +36,8 @@ const { mockRegistry, MockRegistry, MockExecutor } = vi.hoisted(
       validate: vi.fn().mockReturnValue({ valid: true, errors: [] }),
     };
 
-    const _MockRegistry = vi.fn(() => _mockRegistry);
-    const _MockExecutor = vi.fn(() => _mockExecutor);
+    const _MockRegistry = vi.fn(function () { return _mockRegistry; });
+    const _MockExecutor = vi.fn(function () { return _mockExecutor; });
 
     return {
       mockRegistry: _mockRegistry,

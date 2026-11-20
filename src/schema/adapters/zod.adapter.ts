@@ -2,162 +2,206 @@ import type { TSchema } from '@sinclair/typebox';
 import type { SchemaAdapter } from './schema-adapter.interface.js';
 
 // ---------------------------------------------------------------------------
-// Helpers — introspect Zod internals without importing Zod at runtime
+// Structural probes — introspect Zod without importing it at runtime
 // ---------------------------------------------------------------------------
 
-/** Loose shape of a Zod schema's `_def` object. */
-interface ZodDef {
+/** Loose shape of a Zod 3 schema's `_def` object. */
+interface ZodV3Def {
   typeName?: string;
   description?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-/** Minimal interface we rely on — avoids hard-coupling to Zod types. */
-interface ZodLike {
-  _def: ZodDef;
+/** Loose shape of a Zod 4 schema's `_zod.def` object. */
+interface ZodV4Def {
+  type?: string;
+  [key: string]: unknown;
+}
+
+interface ZodV3Like {
+  _def: ZodV3Def;
+  description?: string;
   safeParse: (input: unknown) => unknown;
 }
 
-function isZodLike(input: unknown): input is ZodLike {
-  if (input === null || input === undefined) return false;
-  if (typeof input !== 'object') return false;
-  const obj = input as Record<string, unknown>;
+interface ZodV4Like {
+  _zod: { def: ZodV4Def; optin?: 'optional' | 'defaulted' };
+  description?: string;
+  safeParse: (input: unknown) => unknown;
+}
+
+function hasSafeParse(input: unknown): input is { safeParse: (v: unknown) => unknown } {
   return (
-    '_def' in obj &&
-    obj['_def'] !== null &&
-    typeof obj['_def'] === 'object' &&
-    'safeParse' in obj &&
-    typeof obj['safeParse'] === 'function'
+    input !== null &&
+    typeof input === 'object' &&
+    'safeParse' in (input as object) &&
+    typeof (input as Record<string, unknown>)['safeParse'] === 'function'
   );
 }
 
-// ---------------------------------------------------------------------------
-// Recursive Zod → JSON Schema conversion
-// ---------------------------------------------------------------------------
+function isZodV3(input: unknown): input is ZodV3Like {
+  if (!hasSafeParse(input)) return false;
+  const def = (input as Record<string, unknown>)['_def'];
+  return (
+    def !== null &&
+    typeof def === 'object' &&
+    typeof (def as ZodV3Def).typeName === 'string'
+  );
+}
 
-function convertZodToJsonSchema(zodSchema: ZodLike): Record<string, unknown> {
-  const def = zodSchema._def;
-  const typeName: string = def.typeName ?? '';
-  let result: Record<string, unknown> = {};
+function isZodV4(input: unknown): input is ZodV4Like {
+  if (!hasSafeParse(input)) return false;
+  const internals = (input as Record<string, unknown>)['_zod'];
+  if (internals === null || typeof internals !== 'object') return false;
+  const def = (internals as Record<string, unknown>)['def'];
+  return def !== null && typeof def === 'object' && typeof (def as ZodV4Def).type === 'string';
+}
 
-  switch (typeName) {
-    case 'ZodString': {
-      result = { type: 'string' };
-      break;
-    }
+/** A `.description` set via `.describe()` — available on both Zod 3 and 4. */
+function describedAs(schema: { description?: string }): string | undefined {
+  return typeof schema.description === 'string' && schema.description.length > 0
+    ? schema.description
+    : undefined;
+}
 
-    case 'ZodNumber': {
-      result = convertZodNumber(def);
-      break;
-    }
-
-    case 'ZodBoolean': {
-      result = { type: 'boolean' };
-      break;
-    }
-
-    case 'ZodObject': {
-      result = convertZodObject(def);
-      break;
-    }
-
-    case 'ZodArray': {
-      const itemSchema = def.type as ZodLike;
-      result = { type: 'array', items: convertZodToJsonSchema(itemSchema) };
-      break;
-    }
-
-    case 'ZodEnum': {
-      const values = def.values as string[];
-      result = { type: 'string', enum: [...values] };
-      break;
-    }
-
-    case 'ZodNativeEnum': {
-      const enumObj = def.values as Record<string, string | number>;
-      // Filter out reverse-mapped numeric keys (TypeScript numeric enums
-      // produce { 0: 'Red', Red: 0 } — we want only the string-keyed values).
-      const vals = Object.values(enumObj).filter((v) => {
-        if (typeof v === 'number') {
-          // Keep the value if its reverse-lookup key does not map back
-          return !(String(v) in enumObj);
-        }
-        return true;
-      });
-      result = { type: 'string', enum: vals };
-      break;
-    }
-
-    case 'ZodOptional': {
-      const inner = def.innerType as ZodLike;
-      result = convertZodToJsonSchema(inner);
-      break;
-    }
-
-    case 'ZodNullable': {
-      const inner = def.innerType as ZodLike;
-      result = { ...convertZodToJsonSchema(inner), nullable: true };
-      break;
-    }
-
-    case 'ZodDefault': {
-      const inner = def.innerType as ZodLike;
-      const defaultValue = def.defaultValue();
-      result = { ...convertZodToJsonSchema(inner), default: defaultValue };
-      break;
-    }
-
-    case 'ZodLiteral': {
-      const value = def.value as string | number | boolean;
-      result = { type: typeof value, const: value };
-      break;
-    }
-
-    case 'ZodUnion': {
-      const options = def.options as ZodLike[];
-      result = { anyOf: options.map((opt) => convertZodToJsonSchema(opt)) };
-      break;
-    }
-
-    case 'ZodRecord': {
-      const valueType = def.valueType as ZodLike;
-      result = {
-        type: 'object',
-        additionalProperties: convertZodToJsonSchema(valueType),
-      };
-      break;
-    }
-
-    case 'ZodEffects': {
-      const inner = def.schema as ZodLike;
-      result = convertZodToJsonSchema(inner);
-      break;
-    }
-
-    default: {
-      // Fallback — return an empty schema
-      result = {};
-      break;
-    }
+function withDescription(
+  result: Record<string, unknown>,
+  schema: { description?: string },
+): Record<string, unknown> {
+  const description = describedAs(schema);
+  if (description !== undefined && result['description'] === undefined) {
+    result['description'] = description;
   }
+  return result;
+}
 
-  // Attach description if present on the def
-  if (def.description) {
-    result['description'] = def.description;
+
+// ---------------------------------------------------------------------------
+// Enum helpers (shared by both major versions)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the JSON Schema fragment for an enum from its entries object.
+ *
+ * TypeScript numeric enums are emitted with a reverse mapping — `enum Color
+ * { Red = 0 }` compiles to `{ 0: 'Red', Red: 0 }` — and only the forward
+ * entries are values a caller may actually send. An entry is a reverse
+ * mapping when its value is a string that is itself a key holding the number
+ * this key spells.
+ *
+ * `type` is only emitted when every surviving value shares one JSON type;
+ * a mixed enum carries `enum` alone.
+ */
+function enumFromEntries(entries: Record<string, string | number>): Record<string, unknown> {
+  const values = Object.entries(entries)
+    .filter(([key, value]) => {
+      if (typeof value !== 'string') return true;
+      const roundTrip = entries[value];
+      return typeof roundTrip !== 'number' || String(roundTrip) !== key;
+    })
+    .map(([, value]) => value);
+
+  const result: Record<string, unknown> = { enum: values };
+
+  if (values.length > 0 && values.every((v) => typeof v === 'string')) {
+    result['type'] = 'string';
+  } else if (values.length > 0 && values.every((v) => typeof v === 'number')) {
+    result['type'] = 'number';
   }
 
   return result;
 }
 
 // ---------------------------------------------------------------------------
-// Sub-converters
+// Zod 3 -> JSON Schema
 // ---------------------------------------------------------------------------
 
-function convertZodNumber(def: ZodDef): Record<string, unknown> {
-  const checks: Array<{ kind: string; value?: number }> = def.checks ?? [];
-  let type: string = 'number';
+function convertV3(schema: ZodV3Like): Record<string, unknown> {
+  const def = schema._def;
+  const typeName: string = def.typeName ?? '';
+  let result: Record<string, unknown>;
+
+  switch (typeName) {
+    case 'ZodString':
+      result = { type: 'string' };
+      break;
+
+    case 'ZodNumber':
+      result = convertV3Number(def);
+      break;
+
+    case 'ZodBoolean':
+      result = { type: 'boolean' };
+      break;
+
+    case 'ZodObject':
+      result = convertV3Object(def);
+      break;
+
+    case 'ZodArray':
+      result = { type: 'array', items: convertV3(def['type'] as ZodV3Like) };
+      break;
+
+    case 'ZodEnum':
+      result = { type: 'string', enum: [...(def['values'] as string[])] };
+      break;
+
+    case 'ZodNativeEnum':
+      result = enumFromEntries(def['values'] as Record<string, string | number>);
+      break;
+
+    case 'ZodOptional':
+      result = convertV3(def['innerType'] as ZodV3Like);
+      break;
+
+    case 'ZodNullable':
+      result = { ...convertV3(def['innerType'] as ZodV3Like), nullable: true };
+      break;
+
+    case 'ZodDefault':
+      result = {
+        ...convertV3(def['innerType'] as ZodV3Like),
+        default: (def['defaultValue'] as () => unknown)(),
+      };
+      break;
+
+    case 'ZodLiteral': {
+      const value = def['value'] as string | number | boolean;
+      result = { type: typeof value, const: value };
+      break;
+    }
+
+    case 'ZodUnion':
+      result = { anyOf: (def['options'] as ZodV3Like[]).map(convertV3) };
+      break;
+
+    case 'ZodRecord':
+      result = {
+        type: 'object',
+        additionalProperties: convertV3(def['valueType'] as ZodV3Like),
+      };
+      break;
+
+    case 'ZodEffects':
+      result = convertV3(def['schema'] as ZodV3Like);
+      break;
+
+    default:
+      result = {};
+      break;
+  }
+
+  if (typeof def.description === 'string' && def.description.length > 0) {
+    result['description'] = def.description;
+  }
+
+  return withDescription(result, schema);
+}
+
+function convertV3Number(def: ZodV3Def): Record<string, unknown> {
+  const checks: Array<{ kind: string; value?: number }> = (def['checks'] as never) ?? [];
   const result: Record<string, unknown> = {};
+  let type = 'number';
 
   for (const check of checks) {
     switch (check.kind) {
@@ -177,62 +221,267 @@ function convertZodNumber(def: ZodDef): Record<string, unknown> {
   return result;
 }
 
-function convertZodObject(def: ZodDef): Record<string, unknown> {
-  const shape = def.shape?.() as Record<string, ZodLike> | undefined;
-  if (!shape) {
-    return { type: 'object' };
-  }
+function convertV3Object(def: ZodV3Def): Record<string, unknown> {
+  const shapeFn = def['shape'] as (() => Record<string, ZodV3Like>) | undefined;
+  const shape = typeof shapeFn === 'function' ? shapeFn() : undefined;
+  if (!shape) return { type: 'object' };
 
   const properties: Record<string, Record<string, unknown>> = {};
   const required: string[] = [];
 
-  for (const [key, fieldSchema] of Object.entries(shape)) {
-    properties[key] = convertZodToJsonSchema(fieldSchema);
-    const fieldTypeName = fieldSchema._def.typeName;
-    if (fieldTypeName !== 'ZodOptional' && fieldTypeName !== 'ZodDefault') {
+  for (const [key, field] of Object.entries(shape)) {
+    properties[key] = convertV3(field);
+    const fieldType = field._def.typeName;
+    if (fieldType !== 'ZodOptional' && fieldType !== 'ZodDefault') {
       required.push(key);
     }
   }
 
-  const result: Record<string, unknown> = {
-    type: 'object',
-    properties,
-  };
+  const result: Record<string, unknown> = { type: 'object', properties };
+  if (required.length > 0) result['required'] = required;
+  return result;
+}
 
-  if (required.length > 0) {
-    result['required'] = required;
+// ---------------------------------------------------------------------------
+// Zod 4 -> JSON Schema
+// ---------------------------------------------------------------------------
+
+function v4Def(schema: ZodV4Like): ZodV4Def {
+  return schema._zod.def;
+}
+
+function convertV4(schema: ZodV4Like): Record<string, unknown> {
+  const def = v4Def(schema);
+  let result: Record<string, unknown>;
+
+  switch (def.type) {
+    case 'string':
+      result = convertV4String(def);
+      break;
+
+    case 'number':
+    case 'int':
+      result = convertV4Number(def);
+      break;
+
+    case 'bigint':
+      result = { type: 'integer' };
+      break;
+
+    case 'boolean':
+      result = { type: 'boolean' };
+      break;
+
+    case 'date':
+      result = { type: 'string', format: 'date-time' };
+      break;
+
+    case 'null':
+      result = { type: 'null' };
+      break;
+
+    case 'object':
+      result = convertV4Object(def);
+      break;
+
+    case 'array':
+      result = { type: 'array', items: convertV4(def['element'] as ZodV4Like) };
+      break;
+
+    case 'enum':
+      result = enumFromEntries((def['entries'] as Record<string, string | number>) ?? {});
+      break;
+
+    case 'literal': {
+      const values = (def['values'] as unknown[]) ?? [];
+      result =
+        values.length === 1
+          ? { type: values[0] === null ? 'null' : typeof values[0], const: values[0] }
+          : { enum: [...values] };
+      break;
+    }
+
+    case 'optional':
+    case 'nonoptional':
+    case 'readonly':
+    case 'catch':
+      result = convertV4(def['innerType'] as ZodV4Like);
+      break;
+
+    case 'nullable':
+      result = { ...convertV4(def['innerType'] as ZodV4Like), nullable: true };
+      break;
+
+    case 'default':
+    case 'prefault':
+      result = {
+        ...convertV4(def['innerType'] as ZodV4Like),
+        default: def['defaultValue'],
+      };
+      break;
+
+    case 'union':
+      result = { anyOf: (def['options'] as ZodV4Like[]).map(convertV4) };
+      break;
+
+    case 'record':
+      result = {
+        type: 'object',
+        additionalProperties: convertV4(def['valueType'] as ZodV4Like),
+      };
+      break;
+
+    case 'pipe':
+      // `.transform()` / `z.coerce.*` wrap the source schema in a pipe; the
+      // input side is what a caller must supply.
+      result = convertV4(def['in'] as ZodV4Like);
+      break;
+
+    default:
+      result = {};
+      break;
+  }
+
+  return withDescription(result, schema);
+}
+
+/** Read the `_zod.def` of a Zod 4 check object. */
+function v4CheckDef(check: unknown): Record<string, unknown> {
+  const internals = (check as Record<string, unknown> | null)?.['_zod'];
+  if (internals === null || typeof internals !== 'object') return {};
+  return ((internals as Record<string, unknown>)['def'] as Record<string, unknown>) ?? {};
+}
+
+function convertV4String(def: ZodV4Def): Record<string, unknown> {
+  const result: Record<string, unknown> = { type: 'string' };
+
+  for (const check of (def['checks'] as unknown[]) ?? []) {
+    const cd = v4CheckDef(check);
+    switch (cd['check']) {
+      case 'min_length':
+        result['minLength'] = cd['minimum'];
+        break;
+      case 'max_length':
+        result['maxLength'] = cd['maximum'];
+        break;
+      case 'length_equals':
+        result['minLength'] = cd['length'];
+        result['maxLength'] = cd['length'];
+        break;
+      case 'string_format':
+        if (typeof cd['format'] === 'string' && cd['format'] !== 'regex') {
+          result['format'] = cd['format'];
+        }
+        break;
+    }
+  }
+
+  // `z.email()` and friends put the format on the def itself, not in checks.
+  if (typeof def['format'] === 'string' && result['format'] === undefined) {
+    result['format'] = def['format'];
   }
 
   return result;
 }
 
+const V4_INTEGER_BOUNDS = new Map<string, readonly [number, number]>([
+  ['safeint', [Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]],
+  ['int32', [-2_147_483_648, 2_147_483_647]],
+  ['uint32', [0, 4_294_967_295]],
+]);
+
+function convertV4Number(def: ZodV4Def): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  let minimum = -Infinity;
+  let maximum = Infinity;
+  let integer = def.type === 'int';
+
+  // Standalone formats are on the schema definition. A chained .int() is a check.
+  const applyIntegerFormat = (format: unknown) => {
+    const bounds = typeof format === 'string' ? V4_INTEGER_BOUNDS.get(format) : undefined;
+    if (bounds) {
+      integer = true;
+      minimum = Math.max(minimum, bounds[0]);
+      maximum = Math.min(maximum, bounds[1]);
+    }
+  };
+  applyIntegerFormat(def['format']);
+
+  for (const check of (def['checks'] as unknown[]) ?? []) {
+    const cd = v4CheckDef(check);
+    switch (cd['check']) {
+      case 'number_format':
+        applyIntegerFormat(cd['format']);
+        break;
+      case 'greater_than':
+        if (cd['inclusive']) minimum = Math.max(minimum, cd['value'] as number);
+        else result['exclusiveMinimum'] = cd['value'];
+        break;
+      case 'less_than':
+        if (cd['inclusive']) maximum = Math.min(maximum, cd['value'] as number);
+        else result['exclusiveMaximum'] = cd['value'];
+        break;
+      case 'multiple_of':
+        result['multipleOf'] = cd['value'];
+        break;
+    }
+  }
+
+  result['type'] = integer ? 'integer' : 'number';
+  if (Number.isFinite(minimum)) result['minimum'] = minimum;
+  if (Number.isFinite(maximum)) result['maximum'] = maximum;
+  return result;
+}
+
+function convertV4Object(def: ZodV4Def): Record<string, unknown> {
+  const shape = def['shape'] as Record<string, ZodV4Like> | undefined;
+  if (!shape) return { type: 'object' };
+
+  const properties: Record<string, Record<string, unknown>> = {};
+  const required: string[] = [];
+
+  for (const [key, field] of Object.entries(shape)) {
+    properties[key] = convertV4(field);
+    if (field._zod.optin === undefined) {
+      required.push(key);
+    }
+  }
+
+  const result: Record<string, unknown> = { type: 'object', properties };
+  if (required.length > 0) result['required'] = required;
+  const catchall = def['catchall'] as ZodV4Like | undefined;
+  if (catchall) {
+    result['additionalProperties'] = v4Def(catchall).type === 'never' ? false : convertV4(catchall);
+  }
+  return result;
+}
+
 // ---------------------------------------------------------------------------
-// ZodAdapter
+// Adapter
 // ---------------------------------------------------------------------------
 
 /**
- * SchemaAdapter for Zod schemas.
+ * Schema adapter for Zod, supporting both Zod 3 and Zod 4.
  *
- * Converts Zod schema definitions to JSON Schema / TSchema representations
- * used internally by apcore.
+ * Detection and conversion are structural — Zod is never imported — so the
+ * adapter works whichever major version (if any) the host app installs.
+ * Zod 3 is recognised by `_def.typeName`, Zod 4 by `_zod.def.type`.
  */
 export class ZodAdapter implements SchemaAdapter {
   readonly name = 'zod' as const;
   readonly priority = 50;
 
   detect(input: unknown): boolean {
-    return isZodLike(input);
+    return isZodV3(input) || isZodV4(input);
   }
 
   extract(input: unknown): TSchema {
-    const jsonSchema = this.extractJsonSchema(input);
-    return jsonSchema as unknown as TSchema;
+    return this.extractJsonSchema(input) as unknown as TSchema;
   }
 
   extractJsonSchema(input: unknown): Record<string, unknown> {
-    if (!isZodLike(input)) {
-      throw new Error('ZodAdapter.extractJsonSchema: input is not a Zod schema');
-    }
-    return convertZodToJsonSchema(input);
+    if (isZodV4(input)) return convertV4(input);
+    if (isZodV3(input)) return convertV3(input);
+    throw new Error('ZodAdapter.extractJsonSchema: input is not a Zod schema');
   }
 }

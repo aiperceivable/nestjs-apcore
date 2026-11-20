@@ -25,14 +25,14 @@ const { mockRegistry, MockRegistry } = vi.hoisted(() => {
     count: 0,
     moduleIds: [],
   };
-  const _MockRegistry = vi.fn(() => _mockRegistry);
+  const _MockRegistry = vi.fn(function () { return _mockRegistry; });
   return { mockRegistry: _mockRegistry, MockRegistry: _MockRegistry };
 });
 
 vi.mock('apcore-js', () => ({
   Registry: MockRegistry,
   Executor: vi.fn(),
-  FunctionModule: vi.fn().mockImplementation((opts: Record<string, unknown>) => ({
+  FunctionModule: vi.fn(function (opts: Record<string, unknown>) { return {
     moduleId: opts.moduleId,
     description: opts.description,
     inputSchema: opts.inputSchema,
@@ -42,7 +42,7 @@ vi.mock('apcore-js', () => ({
     documentation: opts.documentation,
     examples: opts.examples,
     execute: opts.execute,
-  })),
+  }; }),
   normalizeResult: (v: unknown) => {
     if (v == null) return {};
     if (typeof v === 'object' && !Array.isArray(v)) return v;

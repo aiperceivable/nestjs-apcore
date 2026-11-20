@@ -6,3 +6,5 @@ minimumReleaseAgeExclude:
 allowBuilds:
   esbuild: true
   keytar: true
+overrides:
+  multer: 2.5.0
